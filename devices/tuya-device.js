@@ -11,6 +11,7 @@ class TuyaDevice {
         this.config = deviceInfo.configDevice
         this.mqttClient = deviceInfo.mqttClient
         this.topic = deviceInfo.topic
+        this.discoveryTopic = deviceInfo.discoveryTopic
 
         // Build TuyAPI device options from device config info
         this.options = {
@@ -48,9 +49,9 @@ class TuyaDevice {
 
         // Build the MQTT topic for this device (friendly name or device id)
         if (this.options.name) {
-            this.baseTopic = this.topic + this.options.name + '/'
+            this.baseTopic = `${this.topic}/${this.options.name}/`
         } else {
-            this.baseTopic = this.topic + this.options.id + '/'
+            this.baseTopic = `${this.topic}/${this.options.id}/`
         }
 
         // Create the new Tuya Device
@@ -81,7 +82,12 @@ class TuyaDevice {
                 debug('Connected to device ' + this.toString())
                 this.heartbeatsMissed = 0
                 this.publishMqtt(this.baseTopic+'status', 'online')
-                this.init()
+                try {
+                    this.init()
+                    debug('Initiated Device ' + this.toString())
+                } catch (e) {
+                    debugError(`device init failed: ${this.toString()}`);
+                }
             }
         })
 
@@ -564,7 +570,7 @@ class TuyaDevice {
 
     // Simple function to help debug output 
     toString() {
-        return this.config.name+' (' +(this.options.ip ? this.options.ip+', ' : '')+this.options.id+', '+this.options.key+')'
+        return `[${this.deviceData.mdl}] ${this.config.name} (${this.options.ip ? this.options.ip + ', ' : ''}${this.options.id}, ${this.options.key})`
     }
 
     set(command) {

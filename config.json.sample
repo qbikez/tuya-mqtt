@@ -1,7 +1,8 @@
 {
     "host": "localhost",
     "port": 1883,
-    "topic": "tuya/",
+    "topic": "tuya",
+    "discovery_topic": "homeassistant",
     "mqtt_user": "",
     "mqtt_pass": ""
 }

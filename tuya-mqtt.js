@@ -35,7 +35,8 @@ function getDevice(configDevice, mqttClient) {
     const deviceInfo = {
         configDevice: configDevice,
         mqttClient: mqttClient,
-        topic: CONFIG.topic
+        topic: CONFIG.topic,
+        discoveryTopic: CONFIG.discovery_topic
     }
     switch (configDevice.type) {
         case 'SimpleSwitch':
@@ -113,7 +114,7 @@ const main = async() => {
 
     mqttClient.on('connect', function (err) {
         debug('Connection established to MQTT server')
-        let topic = CONFIG.topic + '#'
+        let topic = `${CONFIG.topic}/#`
         mqttClient.subscribe(topic)
         mqttClient.subscribe('homeassistant/status')
         mqttClient.subscribe('hass/status')

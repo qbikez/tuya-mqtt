@@ -106,7 +106,7 @@ class RGBTWLight extends TuyaDevice {
     }
 
     initDiscovery() {
-        const configTopic = 'homeassistant/light/'+this.config.id+'/config'
+        const configTopic = `${this.discoveryTopic}/switch/${this.config.id}/config`
 
         const discoveryData = {
             name: (this.config.name) ? this.config.name : this.config.id,

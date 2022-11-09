@@ -51,8 +51,7 @@ class SimpleDimmer extends TuyaDevice {
     }
 
     initDiscovery() {
-        const configTopic = 'homeassistant/light/'+this.config.id+'/config'
-
+        const configTopic = `${this.discoveryTopic}/light/${this.config.id}/config`
         const discoveryData = {
             name: (this.config.name) ? this.config.name : this.config.id,
             state_topic: this.baseTopic+'state',

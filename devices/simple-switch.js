@@ -27,7 +27,7 @@ class SimpleSwitch extends TuyaDevice {
     }
 
     initDiscovery() {
-        const configTopic = 'homeassistant/switch/'+this.config.id+'/config'
+        const configTopic = `${this.discoveryTopic}/switch/${this.config.name}_${this.config.id}/config`
 
         const discoveryData = {
             name: (this.config.name) ? this.config.name : this.config.id,
