@@ -1,0 +1,8 @@
+[
+  {
+    name: 'my switch',
+    id: 'device_id_from_tuya_cli',
+    key: 'device_key_from_tuya_cli',
+    type: 'SimpleSwitch',
+  }
+]
