@@ -114,10 +114,10 @@ const main = async() => {
 
     mqttClient.on('connect', function (err) {
         debug('Connection established to MQTT server')
-        let topic = `${CONFIG.topic}/#`
+        const topic = `${CONFIG.topic}/#`
         mqttClient.subscribe(topic)
-        mqttClient.subscribe('homeassistant/status')
-        mqttClient.subscribe('hass/status')
+        const statusTopic = CONFIG.status_topic || 'homeassistant/status'
+        mqttClient.subscribe(statusTopic)
         initDevices(configDevices, mqttClient)
     })
 

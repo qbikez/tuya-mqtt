@@ -3,6 +3,7 @@
     "port": 1883,
     "topic": "tuya",
     "discovery_topic": "homeassistant",
+    "status_topic": "homeassistant/status",
     "mqtt_user": "",
     "mqtt_pass": ""
 }
