@@ -23,14 +23,18 @@ class SimpleSwitch extends TuyaDevice {
         await utils.sleep(1)
 
         // Get initial states and start publishing topics
+        const schema = await this.device.get({"schema": true})
+        console.log('schema', schema);
+        //this.publishMqtt(this.baseTopic + "schema", schema, true)
+
         this.getStates()
     }
 
     initDiscovery() {
-        const configTopic = `${this.discoveryTopic}/switch/${this.config.name}_${this.config.id}/config`
+        const configTopic = `${this.discoveryTopic}/switch/${this.options.name}_${this.options.id}/config`;
 
         const discoveryData = {
-            name: (this.config.name) ? this.config.name : this.config.id,
+            name: this.options.name ? this.options.name : this.config.id,
             state_topic: this.baseTopic+'state',
             command_topic: this.baseTopic+'command',
             availability_topic: this.baseTopic+'status',

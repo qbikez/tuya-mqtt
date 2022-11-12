@@ -295,7 +295,7 @@ class TuyaDevice {
         const deviceTopic = this.deviceTopics.hasOwnProperty(stateTopic) ? this.deviceTopics[stateTopic] : ''
 
         if (deviceTopic) {
-            debugCommand('Device '+this.options.id+' received command topic: '+commandTopic+', message: '+command)
+            debugCommand(`Device ${this.options.id} received command topic: ${commandTopic}, message: ${JSON.stringify(command)}`)
             let commandResult = this.sendTuyaCommand(command, deviceTopic)
             if (!commandResult) {
                 debugCommand('Command topic '+this.baseTopic+commandTopic+' received invalid value: '+command)
@@ -356,11 +356,11 @@ class TuyaDevice {
                     tuyaCommand.set = !this.dps[tuyaCommand.dps].val
                 } else {
                     command = this.parseBoolCommand(command)
-                    if (typeof command.set === 'boolean') {
+                    //if (typeof command.set === 'boolean') {
                         tuyaCommand.set = command.set
-                    } else {
-                        tuyaCommand.set = '!!!INVALID!!!'
-                    }
+                    // } else {
+                    //     tuyaCommand.set = '!!!INVALID!!!'
+                    // }
                 }
                 break;
             case 'int':
@@ -639,8 +639,8 @@ class TuyaDevice {
     }
 
     // Publish MQTT
-    publishMqtt(topic, message, isDebug) {
-        if (isDebug) { debugState(topic, message) }
+    publishMqtt(topic, message) {
+        debugState(topic, message)
         this.mqttClient.publish(topic, message, { qos: 1 });
     }
 }

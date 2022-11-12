@@ -5,6 +5,7 @@ const json5 = require('json5')
 const debug = require('debug')('tuya-mqtt:info')
 const debugCommand = require('debug')('tuya-mqtt:command')
 const debugError = require('debug')('tuya-mqtt:error')
+const SimpleCover = require('./devices/simple-cover')
 const SimpleSwitch = require('./devices/simple-switch')
 const SimpleDimmer = require('./devices/simple-dimmer')
 const RGBTWLight = require('./devices/rgbtw-light')
@@ -39,6 +40,9 @@ function getDevice(configDevice, mqttClient) {
         discoveryTopic: CONFIG.discovery_topic
     }
     switch (configDevice.type) {
+        case 'SimpleCover':
+            return new SimpleCover(deviceInfo)
+            break;
         case 'SimpleSwitch':
             return new SimpleSwitch(deviceInfo)
             break;
