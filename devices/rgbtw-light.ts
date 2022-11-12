@@ -1,9 +1,17 @@
-const TuyaDevice = require('./tuya-device')
+import TuyaDevice from './tuya-device'
+import dbg from 'debug'
+import utils from '../lib/utils'
+
 const debug = require('debug')('tuya-mqtt:device-detect')
 const debugDiscovery = require('debug')('tuya-mqtt:discovery')
-const utils = require('../lib/utils')
 
-class RGBTWLight extends TuyaDevice {
+export default class RGBTWLight extends TuyaDevice {
+    guess: any
+
+    constructor(deviceInfo) {
+        super(deviceInfo)
+    }
+
     async init() {
         // If no manual config try to detect device settings
         if (!this.config.dpsPower) { 
@@ -108,7 +116,7 @@ class RGBTWLight extends TuyaDevice {
     initDiscovery() {
         const configTopic = `${this.discoveryTopic}/switch/${this.config.id}/config`
 
-        const discoveryData = {
+        const discoveryData: Record<string, string | number | any> = {
             name: (this.config.name) ? this.config.name : this.config.id,
             state_topic: this.baseTopic+'state',
             command_topic: this.baseTopic+'command',
@@ -175,5 +183,3 @@ class RGBTWLight extends TuyaDevice {
         }
     }
 }
-
-module.exports = RGBTWLight

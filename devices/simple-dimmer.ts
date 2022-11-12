@@ -1,9 +1,14 @@
-const TuyaDevice = require('./tuya-device')
-const debug = require('debug')('tuya-mqtt:device')
-const debugDiscovery = require('debug')('tuya-mqtt:discovery')
-const utils = require('../lib/utils')
+import TuyaDevice from './tuya-device'
+import utils from '../lib/utils'
+import dbg from 'debug';
 
-class SimpleDimmer extends TuyaDevice {
+const debugDiscovery = dbg('tuya-mqtt:discovery')
+
+export default class SimpleDimmer extends TuyaDevice {
+    constructor(deviceInfo) {
+        super(deviceInfo)
+    }
+    
     async init() {
         // Set device specific variables
         this.config.dpsPower = this.config.dpsPower ? this.config.dpsPower : 1
@@ -71,5 +76,3 @@ class SimpleDimmer extends TuyaDevice {
         this.publishMqtt(configTopic, JSON.stringify(discoveryData))
     }
 }
-
-module.exports = SimpleDimmer

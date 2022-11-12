@@ -1,9 +1,11 @@
-const TuyaDevice = require("./tuya-device");
-const debug = require("debug")("tuya-mqtt:device");
-const debugDiscovery = require("debug")("tuya-mqtt:discovery");
-const utils = require("../lib/utils");
+import TuyaDevice from "./tuya-device";
+import dbg from 'debug';
+import utils from "../lib/utils";
 
-class SimpleCover extends TuyaDevice {
+const debug = dbg("tuya-mqtt:device");
+const debugDiscovery = dbg("tuya-mqtt:discovery");
+
+export default class SimpleCover extends TuyaDevice {
   async init() {
     // Set device specific variables
     this.config.dpsPower = this.config.dpsPower ? this.config.dpsPower : 1;
@@ -56,5 +58,3 @@ class SimpleCover extends TuyaDevice {
     };
   }
 }
-
-module.exports = SimpleCover;

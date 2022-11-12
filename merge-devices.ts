@@ -1,7 +1,6 @@
 #!/usr/bin/env node
-const fs = require('fs');
-const json5 = require('json5');
-const utils = require('./lib/utils');
+import fs from 'fs';
+import json5 from 'json5';
 
 // Setup Exit Handlers
 process.on('exit', processExit.bind(0));

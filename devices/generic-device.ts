@@ -1,8 +1,10 @@
-const TuyaDevice = require('./tuya-device')
-const debug = require('debug')('tuya-mqtt:device')
-const utils = require('../lib/utils')
+import TuyaDevice from './tuya-device'
+import dbg from 'debug'
+import utils from '../lib/utils'
 
-class GenericDevice extends TuyaDevice {
+const debug = dbg('tuya-mqtt:device')
+
+export default class GenericDevice extends TuyaDevice {
     async init() {
         this.deviceData.mdl = 'Generic Device'
 
@@ -20,12 +22,10 @@ class GenericDevice extends TuyaDevice {
                     debug('Cannot get initial DPS state data for device '+this.options.name+' but data updates will be publish')
                 }
             }
-            this.publishMqtt(this.baseTopic + "schema", result, true)
+            this.publishMqtt(this.baseTopic + "schema", result)
         }
 
         // Get initial states and start publishing topics
         this.getStates()
     }
 }
-
-module.exports = GenericDevice

@@ -22,7 +22,7 @@ class Utils
     msSleep(ms) {
         return new Promise(res => setTimeout(res, ms))
     }
-
 }
 
-module.exports = new Utils()
+const utils = new Utils();
+export default utils;

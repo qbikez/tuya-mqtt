@@ -1,18 +1,21 @@
 #!/usr/bin/env node
-const fs = require('fs')
-const mqtt = require('mqtt')
-const json5 = require('json5')
-const debug = require('debug')('tuya-mqtt:info')
-const debugCommand = require('debug')('tuya-mqtt:command')
-const debugError = require('debug')('tuya-mqtt:error')
-const SimpleCover = require('./devices/simple-cover')
-const SimpleSwitch = require('./devices/simple-switch')
-const SimpleDimmer = require('./devices/simple-dimmer')
-const RGBTWLight = require('./devices/rgbtw-light')
-const GenericDevice = require('./devices/generic-device')
-const utils = require('./lib/utils')
+import fs from 'fs'
+import mqtt from 'mqtt'
+import dbg from 'debug';
+import SimpleCover from './devices/simple-cover'
+import SimpleSwitch from './devices/simple-switch'
+import SimpleDimmer from './devices/simple-dimmer'
+import RGBTWLight from './devices/rgbtw-light'
+import GenericDevice from './devices/generic-device'
+import utils from './lib/utils'
+import CONFIG from './config.json'
+import { DeviceConfig, DeviceInfo } from './interfaces';
 
-var CONFIG = undefined
+const debug = dbg('tuya-mqtt:info')
+const debugCommand =dbg('tuya-mqtt:command')
+const debugError = dbg('tuya-mqtt:error')
+
+
 var tuyaDevices = new Array()
 
 // Setup Exit Handlers
@@ -32,8 +35,8 @@ async function processExit(exitCode) {
 }
 
 // Get new deivce based on configured type
-function getDevice(configDevice, mqttClient) {
-    const deviceInfo = {
+function getDevice(configDevice: DeviceConfig, mqttClient) {
+    const deviceInfo: DeviceInfo = {
         configDevice: configDevice,
         mqttClient: mqttClient,
         topic: CONFIG.topic,
@@ -42,22 +45,18 @@ function getDevice(configDevice, mqttClient) {
     switch (configDevice.type) {
         case 'SimpleCover':
             return new SimpleCover(deviceInfo)
-            break;
         case 'SimpleSwitch':
             return new SimpleSwitch(deviceInfo)
-            break;
         case 'SimpleDimmer':
             return new SimpleDimmer(deviceInfo)
-            break;
         case 'RGBTWLight':
             return new RGBTWLight(deviceInfo)
-            break;
     }
     return new GenericDevice(deviceInfo)
 }
 
-function initDevices(configDevices, mqttClient) {
-    for (let configDevice of configDevices) {
+function initDevices(configDevices: DeviceConfig[], mqttClient) {
+    for (const configDevice of configDevices) {
         const newDevice = getDevice(configDevice, mqttClient)
         tuyaDevices.push(newDevice)
     }
@@ -77,27 +76,17 @@ async function republishDevices() {
 
 // Main code function
 const main = async() => {
-    let configDevices
-    let mqttClient
-
     try {
-        CONFIG = require('./config')
     } catch (e) {
         console.error('Configuration file not found!')
         debugError(e)
         process.exit(1)
     }
 
-    if (typeof CONFIG.qos == 'undefined') {
-        CONFIG.qos = 1
-    }
-    if (typeof CONFIG.retain == 'undefined') {
-        CONFIG.retain = false
-    }
-
+    let configDevices: Array<DeviceConfig> = [];
     try {
-        configDevices = fs.readFileSync('./devices.conf', 'utf8')
-        configDevices = json5.parse(configDevices)
+        const content = fs.readFileSync('./devices.json', 'utf8');
+        configDevices = JSON.parse(content)
     } catch (e) {
         console.error('Devices file not found!')
         debugError(e)
@@ -109,7 +98,7 @@ const main = async() => {
         process.exit(1)
     }
 
-    mqttClient = mqtt.connect({
+    const mqttClient = mqtt.connect({
         host: CONFIG.host,
         port: CONFIG.port,
         username: CONFIG.mqtt_user,
@@ -137,7 +126,7 @@ const main = async() => {
         debug('Unable to connect to MQTT server', error)
     })
 
-    mqttClient.on('message', function (topic, message) {
+    mqttClient.on('message', function (topic: string, message: string) {
         try {
             message = message.toString()
             const splitTopic = topic.split('/')
