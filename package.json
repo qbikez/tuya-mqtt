@@ -12,7 +12,8 @@
     "lint": "eslint . --fix",
     "build": "tsc -p tsconfig.json",
     "start:debug": "cross-env DEBUG=tuya-mqtt:* ts-node tuya-mqtt.ts",
-    "start": "cross-env DEBUG=tuya-mqtt:info ts-node tuya-mqtt.ts"
+    "start": "cross-env DEBUG=tuya-mqtt:info ts-node tuya-mqtt.ts",
+    "watch": "cross-env DEBUG=tuya-mqtt:* ts-node tuya-mqtt.ts --watch"
   },
   "author": {
     "name": "TheAgentK",

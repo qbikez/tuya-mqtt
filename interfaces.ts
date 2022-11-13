@@ -1,10 +1,16 @@
-export interface DeviceConfig {
-  type: string
-}
+export type DeviceConfig = {
+  type: string;
+};
 
-export interface DeviceInfo {
-  configDevice: DeviceConfig
-  mqttClient: any
-  topic: string
-  discoveryTopic: string
-}
+export type DeviceInfo = {
+  configDevice: DeviceConfig;
+  mqttClient: any;
+  topic: string;
+  discoveryTopic: string;
+};
+
+export type DeviceTopic = {
+  key: string;
+  type: string;
+  [key: string]: any;
+};

@@ -2,7 +2,7 @@ import TuyAPI from "tuyapi";
 import { evaluate } from "mathjs";
 import utils from "../lib/utils";
 import dbg from "debug";
-import { DeviceInfo } from "../interfaces";
+import { DeviceInfo, DeviceTopic } from "../interfaces";
 const debug = dbg("tuya-mqtt:tuyapi");
 const debugState = dbg("tuya-mqtt:state");
 const debugCommand = dbg("tuya-mqtt:command");
@@ -23,7 +23,8 @@ export default class TuyaDevice {
   deviceData: { ids: any[]; name: any; mf: string; mdl?: any };
   dps: Record<string, any>;
   color: { h: number; s: number; b: number };
-  deviceTopics: Record<string, any>;
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  deviceTopics: Record<string, DeviceTopic>;
   heartbeatsMissed: number;
   reconnecting: boolean;
   baseTopic: string;
@@ -211,11 +212,10 @@ export default class TuyaDevice {
       const deviceTopic = this.deviceTopics[topic];
       const key = deviceTopic.key;
       // Only publish values if different from previous value
-      if (this.dps[key] && this.dps[key].updated) {
-        const state = this.getTopicState(deviceTopic, this.dps[key].val);
-        if (state) {
-          this.publishMqtt(this.baseTopic + topic, state);
-        }
+      if (this.dps[key]?.updated) {
+        const state = this.getFriendlyState(deviceTopic, this.dps[key].val);
+
+        this.publishMqtt(this.baseTopic + topic, state);
       }
     }
 
@@ -249,7 +249,7 @@ export default class TuyaDevice {
         // Only publish values if different from previous value
         if (this.dps[key].updated) {
           const dpsKeyTopic = dpsTopic + "/" + key + "/state";
-          const data = this.dps.key ? this.dps[key].val.toString() : "None";
+          const data = this.dps[key]?.val?.toString() || "None";
           debugState("MQTT DPS" + key + ": " + dpsKeyTopic + " -> ", data);
           this.publishMqtt(dpsKeyTopic, data);
           this.dps[key].updated = false;
@@ -261,7 +261,7 @@ export default class TuyaDevice {
   }
 
   // Get the friendly topic state based on configured DPS value type
-  getTopicState(deviceTopic, value) {
+  getFriendlyState(deviceTopic: DeviceTopic, value: unknown) {
     let state;
     switch (deviceTopic.type) {
       case "bool":
@@ -288,10 +288,14 @@ export default class TuyaDevice {
         state = state.join(",");
         break;
       case "str":
-        state = value || "";
+        state = this.parseStringState(value);
         break;
     }
     return state;
+  }
+
+  parseStringState(value: unknown): string {
+    return (value as string) || "";
   }
 
   // Parse the received state numeric value based on deviceTopic rules
@@ -341,12 +345,11 @@ export default class TuyaDevice {
   }
 
   // Process MQTT commands for all device command topics
-  processDeviceCommand(command, commandTopic) {
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  processDeviceCommand(command: string | {}, commandTopic: string) {
     // Determine state topic from command topic to find proper template
     const stateTopic = commandTopic.replace("command", "state");
-    const deviceTopic = this.deviceTopics.stateTopic
-      ? this.deviceTopics[stateTopic]
-      : "";
+    const deviceTopic = this.deviceTopics[stateTopic] || "";
 
     if (deviceTopic) {
       debugCommand(
@@ -359,20 +362,12 @@ export default class TuyaDevice {
       const commandResult = this.sendTuyaCommand(command, deviceTopic);
       if (!commandResult) {
         debugCommand(
-          "Command topic " +
-            this.baseTopic +
-            commandTopic +
-            " received invalid value: " +
-            command
+          `Command topic ${this.baseTopic}${commandTopic} received invalid value: ${command}`
         );
       }
     } else {
       debugCommand(
-        "Invalid command topic " +
-          this.baseTopic +
-          commandTopic +
-          " for device id: " +
-          this.config.id
+        `Invalid command topic ${this.baseTopic}${commandTopic} for device id: ${this.config.id}. Expected '${deviceTopic}'.`
       );
     }
   }
@@ -767,7 +762,7 @@ export default class TuyaDevice {
   }
 
   // Publish MQTT
-  publishMqtt(topic, message) {
+  publishMqtt(topic: string, message: string) {
     debugState(topic, message);
     this.mqttClient.publish(topic, message, { qos: 1 });
   }
