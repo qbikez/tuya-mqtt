@@ -10,22 +10,28 @@ const debugError = dbg("tuya-mqtt:error");
 
 export default class TuyaDevice {
   config: any;
-    mqttClient: any;
-    topic: string;
-    discoveryTopic: string;
-    options: { id: string; key: string; name?: string; ip?: string; version?: string };
-    deviceData: { ids: any[]; name: any; mf: string; mdl?: any; };
-    dps: {};
-    color: { h: number; s: number; b: number; };
-    deviceTopics: Record<string, any>;
-    heartbeatsMissed: number;
-    reconnecting: boolean;
-    baseTopic: string;
-    device: any;
-    connected: boolean | undefined;
-    isRgbtwLight: any;
-    cmdColor: { h: any; s: any; b: any; } = { h: 0, s: 0, b: 0 };
-  
+  mqttClient: any;
+  topic: string;
+  discoveryTopic: string;
+  options: {
+    id: string;
+    key: string;
+    name?: string;
+    ip?: string;
+    version?: string;
+  };
+  deviceData: { ids: any[]; name: any; mf: string; mdl?: any };
+  dps: Record<string, any>;
+  color: { h: number; s: number; b: number };
+  deviceTopics: Record<string, any>;
+  heartbeatsMissed: number;
+  reconnecting: boolean;
+  baseTopic: string;
+  device: any;
+  connected: boolean | undefined;
+  isRgbtwLight: any;
+  cmdColor: { h: any; s: any; b: any } = { h: 0, s: 0, b: 0 };
+
   constructor(deviceInfo: DeviceInfo) {
     this.config = deviceInfo.configDevice;
     this.mqttClient = deviceInfo.mqttClient;
@@ -141,15 +147,16 @@ export default class TuyaDevice {
       this.heartbeatsMissed = 0;
     });
   }
-    init() {
-        throw new Error("Method not implemented.");
-    }
+
+  init() {
+    throw new Error("Method not implemented.");
+  }
 
   // Get and update cached values of all configured/known dps value for device
   async getStates() {
     // Suppress topic updates while syncing device state with cached state
     this.connected = false;
-    for (let topic in this.deviceTopics) {
+    for (const topic in this.deviceTopics) {
       const key = this.deviceTopics[topic].key;
       if (!this.dps[key]) {
         this.dps[key] = {};
@@ -168,9 +175,9 @@ export default class TuyaDevice {
 
   // Update cached DPS values on data updates
   updateState(data) {
-    if (typeof data.dps != "undefined") {
+    if (typeof data.dps !== "undefined") {
       // Update cached device state data
-      for (let key in data.dps) {
+      for (const key in data.dps) {
         // Only update if the received value is different from previous value
         if (this.dps[key] !== data.dps[key]) {
           this.dps[key] = {
@@ -179,15 +186,9 @@ export default class TuyaDevice {
           };
         }
         if (this.isRgbtwLight) {
-          if (
-            this.config.hasOwnProperty("dpsColor") &&
-            this.config.dpsColor == key
-          ) {
+          if (this.config.dpsColor && this.config.dpsColor == key) {
             this.updateColorState(data.dps[key]);
-          } else if (
-            this.config.hasOwnProperty("dpsMode") &&
-            this.config.dpsMode == key
-          ) {
+          } else if (this.config.dpsMode && this.config.dpsMode == key) {
             // If color/white mode is changing, force sending color state
             // Allows overriding saturation value to 0% for white mode for the HSB device topics
             this.dps[this.config.dpsColor].updated = true;
@@ -206,7 +207,7 @@ export default class TuyaDevice {
     if (!this.connected) return;
 
     // Loop through and publish all device specific topics
-    for (let topic in this.deviceTopics) {
+    for (const topic in this.deviceTopics) {
       const deviceTopic = this.deviceTopics[topic];
       const key = deviceTopic.key;
       // Only publish values if different from previous value
@@ -225,14 +226,14 @@ export default class TuyaDevice {
   // Publish all dps-values to topic
   publishDpsTopics() {
     try {
-      if (!Object.keys(this.dps).length) {
+      if (Object.keys(this.dps).length === 0) {
         return;
       }
 
       const dpsTopic = this.baseTopic + "dps";
       // Publish DPS JSON data if not empty
       let data = {};
-      for (let key in this.dps) {
+      for (const key in this.dps) {
         // Only publish values if different from previous value
         if (this.dps[key].updated) {
           data[key] = this.dps[key].val;
@@ -244,13 +245,11 @@ export default class TuyaDevice {
       this.publishMqtt(dpsStateTopic, data);
 
       // Publish dps/<#>/state value for each device DPS
-      for (let key in this.dps) {
+      for (const key in this.dps) {
         // Only publish values if different from previous value
         if (this.dps[key].updated) {
           const dpsKeyTopic = dpsTopic + "/" + key + "/state";
-          const data = this.dps.hasOwnProperty(key)
-            ? this.dps[key].val.toString()
-            : "None";
+          const data = this.dps.key ? this.dps[key].val.toString() : "None";
           debugState("MQTT DPS" + key + ": " + dpsKeyTopic + " -> ", data);
           this.publishMqtt(dpsKeyTopic, data);
           this.dps[key].updated = false;
@@ -275,9 +274,9 @@ export default class TuyaDevice {
       case "hsb":
       case "hsbhex":
         // Return comma separate array of component values for specific topic
-        state = new Array();
+        state = [];
         const components = deviceTopic.components.split(",");
-        for (let i in components) {
+        for (const i in components) {
           // If light is in white mode always report saturation 0%, otherwise report actual value
           state.push(
             components[i] === "s" &&
@@ -289,7 +288,7 @@ export default class TuyaDevice {
         state = state.join(",");
         break;
       case "str":
-        state = value ? value : "";
+        state = value || "";
         break;
     }
     return state;
@@ -345,7 +344,7 @@ export default class TuyaDevice {
   processDeviceCommand(command, commandTopic) {
     // Determine state topic from command topic to find proper template
     const stateTopic = commandTopic.replace("command", "state");
-    const deviceTopic = this.deviceTopics.hasOwnProperty(stateTopic)
+    const deviceTopic = this.deviceTopics.stateTopic
       ? this.deviceTopics[stateTopic]
       : "";
 
@@ -357,7 +356,7 @@ export default class TuyaDevice {
           command
         )}`
       );
-      let commandResult = this.sendTuyaCommand(command, deviceTopic);
+      const commandResult = this.sendTuyaCommand(command, deviceTopic);
       if (!commandResult) {
         debugCommand(
           "Command topic " +
@@ -375,7 +374,6 @@ export default class TuyaDevice {
           " for device id: " +
           this.config.id
       );
-      return;
     }
   }
 
@@ -410,7 +408,7 @@ export default class TuyaDevice {
     if (typeof message === "boolean") {
       return message;
     } else if (message === "true" || message === "false") {
-      return message === "true" ? true : false;
+      return message === "true";
     } else if (!isNaN(message)) {
       return Number(message);
     } else {
@@ -429,7 +427,7 @@ export default class TuyaDevice {
           tuyaCommand.set = !this.dps[tuyaCommand.dps].val;
         } else {
           command = this.parseBoolCommand(command);
-          //if (typeof command.set === 'boolean') {
+          // if (typeof command.set === 'boolean') {
           tuyaCommand.set = command.set;
           // } else {
           //     tuyaCommand.set = '!!!INVALID!!!'
@@ -474,13 +472,12 @@ export default class TuyaDevice {
       case "true":
       case "false":
         return {
-          set:
+          set: !!(
             command === "on" ||
             command === "1" ||
             command === "true" ||
             command === 1
-              ? true
-              : false,
+          ),
         };
       default:
         return command;
@@ -489,16 +486,13 @@ export default class TuyaDevice {
 
   // Validate/transform set interger values
   parseNumberCommand(command, deviceTopic) {
-    let value: any = undefined;
+    let value: any;
     const invalid = "!!!INVALID!!!";
 
     // Check if it's a number and it's not outside of defined range
     if (isNaN(command)) {
       return invalid;
-    } else if (
-      deviceTopic.hasOwnProperty("topicMin") &&
-      command < deviceTopic.topicMin
-    ) {
+    } else if (deviceTopic.topicMin && command < deviceTopic.topicMin) {
       debugError(
         'Received command value "' +
           command +
@@ -508,10 +502,7 @@ export default class TuyaDevice {
         "Overriding command with minimum value " + deviceTopic.topicMin
       );
       command = deviceTopic.topicMin;
-    } else if (
-      deviceTopic.hasOwnProperty("topicMax") &&
-      command > deviceTopic.topicMax
-    ) {
+    } else if (deviceTopic.topicMax && command > deviceTopic.topicMax) {
       debugError(
         'Received command value "' +
           command +
@@ -584,7 +575,7 @@ export default class TuyaDevice {
     // Update any HSB component with a changed value
     components = components.split(",");
     const values = value.split(",");
-    for (let i in components) {
+    for (const i in components) {
       this.cmdColor[components[i]] = Math.round(values[i]);
     }
   }
@@ -592,7 +583,7 @@ export default class TuyaDevice {
   // Returns Tuya HSB format value from current cmdColor HSB values
   // Credit homebridge-tuya project for HSB conversion code
   parseTuyaHsbColor() {
-    let { h, s, b } = this.cmdColor;
+    const { h, s, b } = this.cmdColor;
     const hexColor =
       h.toString(16).padStart(4, "0") +
       (10 * s).toString(16).padStart(4, "0") +
@@ -615,37 +606,37 @@ export default class TuyaDevice {
     h /= 60;
     s /= 100;
     b *= 2.55;
-    const i = Math.floor(h),
-      f = h - i,
-      p = b * (1 - s),
-      q = b * (1 - s * f),
-      t = b * (1 - s * (1 - f)),
-      rgb = (() => {
-        switch (i % 6) {
-          case 0:
-            return [b, t, p];
-          case 1:
-            return [q, b, p];
-          case 2:
-            return [p, b, t];
-          case 3:
-            return [p, q, b];
-          case 4:
-            return [t, p, b];
-          case 5:
-            return [b, p, q];
-          default: 
-            throw 'no way!';
-        }
-      })().map((c) => Math.round(c).toString(16).padStart(2, "0")),
-      hex = rgb.join("");
+    const i = Math.floor(h);
+    const f = h - i;
+    const p = b * (1 - s);
+    const q = b * (1 - s * f);
+    const t = b * (1 - s * (1 - f));
+    const rgb = (() => {
+      switch (i % 6) {
+        case 0:
+          return [b, t, p];
+        case 1:
+          return [q, b, p];
+        case 2:
+          return [p, b, t];
+        case 3:
+          return [p, q, b];
+        case 4:
+          return [t, p, b];
+        case 5:
+          return [b, p, q];
+        default:
+          throw "no way!";
+      }
+    })().map((c) => Math.round(c).toString(16).padStart(2, "0"));
+    const hex = rgb.join("");
 
     return hex + hsb;
   }
 
   // Set white/colour mode based on received commands
   async setLight(topic, command) {
-    let targetMode: any = undefined;
+    let targetMode: any;
 
     if (
       topic.key === this.config.dpsWhiteValue ||
@@ -692,9 +683,9 @@ export default class TuyaDevice {
     }${this.options.id}, ${this.options.key})`;
   }
 
-  set(command) {
+  async set(command) {
     debug("Set device " + this.options.id + " -> " + JSON.stringify(command));
-    return new Promise((resolve, reject) => {
+    return await new Promise((resolve, reject) => {
       this.device.set(command).then((result) => {
         resolve(result);
       });

@@ -1,0 +1,62 @@
+[
+  {
+    "name": "zawor ogrod",
+    "id": "bfb48828fd66c851f8h9xy",
+    "key": "c427112a82bbc7ae",
+    "type": "SimpleSwitch"
+  },
+  {
+    "name": "roleta sypialnia",
+    "id": "bfbe514d26008475bd3o1r",
+    "key": "d1b4fdb900ec83d4",
+    "type": "SimpleCover"
+  },
+  {
+    "name": "roleta jadalnia",
+    "id": "bf15d2183e977be503ltaj",
+    "key": "d0e8dbf0b68f3aa1",
+    "type": "SimpleCover"
+  },
+  {
+    "name": "roleta gabinet",
+    "id": "bff7b91de42f86a97bvzl4",
+    "key": "857aa8f62762a8d2",
+    "type": "SimpleCover"
+  },
+  {
+    "name": "roleta Jeremi",
+    "id": "bf9346c6635dfb4b38sj2p",
+    "key": "41e2bc9711f8ccdc",
+    "type": "SimpleCover"
+  },
+  {
+    "name": "roleta Julian",
+    "id": "bfa0ce45a5a78e206bwkml",
+    "key": "713ee736ef923ea4",
+    "type": "SimpleCover"
+  },
+  {
+    "name": "Roleta bruno",
+    "id": "bfaeeddfa7c06ec0a1rxig",
+    "key": "de08de295a7188ba",
+    "type": "SimpleCover"
+  },
+  {
+    "name": "roleta salon",
+    "id": "bf5ed67ddd3477b98ezsle",
+    "key": "7dd26895d4281eb2",
+    "type": "SimpleCover"
+  },
+  {
+    "name": "roleta salon wyjscie na ogrod",
+    "id": "bf3ed0fa58875f1106zlty",
+    "key": "b6c253abe733d875",
+    "type": "SimpleCover"
+  },
+  {
+    "name": "roleta kuchnia",
+    "id": "bfda7679972cdbcaed4pyg",
+    "key": "ee6cfd02bda867ad",
+    "type": "SimpleCover"
+  }
+]

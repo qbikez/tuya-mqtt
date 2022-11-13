@@ -1,28 +1,27 @@
-class Utils
-{
+class Utils {
+  // Check if data is JSON or not
+  isJsonString (data) {
+    try {
+      const parsedData = JSON.parse(data)
+      if (parsedData && typeof parsedData === 'object') {
+        return parsedData
+      }
+    } catch (e) {
+      // ignore
+     }
 
-    // Check if data is JSON or not
-    isJsonString(data) {
-        try {
-            const parsedData = JSON.parse(data)
-            if (parsedData && typeof parsedData === "object") {
-                return parsedData
-            }
-        }
-        catch (e) { }
+    return false
+  }
 
-        return false
-    }
+  // Simple sleep function for various required delays
+  async sleep (sec) {
+    return await new Promise(res => setTimeout(res, sec * 1000))
+  }
 
-    // Simple sleep function for various required delays
-    sleep(sec) {
-        return new Promise(res => setTimeout(res, sec*1000))
-    }
-
-    msSleep(ms) {
-        return new Promise(res => setTimeout(res, ms))
-    }
+  async msSleep (ms) {
+    return await new Promise(res => setTimeout(res, ms))
+  }
 }
 
-const utils = new Utils();
-export default utils;
+const utils = new Utils()
+export default utils

@@ -1,31 +1,39 @@
-import TuyaDevice from './tuya-device'
-import dbg from 'debug'
-import utils from '../lib/utils'
+import TuyaDevice from "./tuya-device";
+import dbg from "debug";
+import utils from "../lib/utils";
 
-const debug = dbg('tuya-mqtt:device')
+const debug = dbg("tuya-mqtt:device");
 
 export default class GenericDevice extends TuyaDevice {
-    async init() {
-        this.deviceData.mdl = 'Generic Device'
+  async init() {
+    this.deviceData.mdl = "Generic Device";
 
-        // Check if custom template in device config
-        if (this.config.hasOwnProperty('template')) {
-            // Map generic DPS topics to device specific topic names
-            this.deviceTopics = this.config.template
-        } else {
-            // Try to get schema to at least know what DPS keys to get initial update
-            const result = await this.device.get({"schema": true})
+    // Check if custom template in device config
+    if (this.config.template) {
+      // Map generic DPS topics to device specific topic names
+      this.deviceTopics = this.config.template;
+    } else {
+      // Try to get schema to at least know what DPS keys to get initial update
+      const result = await this.device.get({ schema: true });
 
-            if (!utils.isJsonString(result)) {
-                if (result === 'Schema for device not available') {
-                    debug('Device id '+this.config.id+' failed schema discovery and no custom template defined')
-                    debug('Cannot get initial DPS state data for device '+this.options.name+' but data updates will be publish')
-                }
-            }
-            this.publishMqtt(this.baseTopic + "schema", result)
+      if (!utils.isJsonString(result)) {
+        if (result === "Schema for device not available") {
+          debug(
+            "Device id " +
+              this.config.id +
+              " failed schema discovery and no custom template defined"
+          );
+          debug(
+            "Cannot get initial DPS state data for device " +
+              this.options.name +
+              " but data updates will be publish"
+          );
         }
-
-        // Get initial states and start publishing topics
-        this.getStates()
+      }
+      this.publishMqtt(this.baseTopic + "schema", result);
     }
+
+    // Get initial states and start publishing topics
+    this.getStates();
+  }
 }

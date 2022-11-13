@@ -4,7 +4,12 @@
   "description": "Control Tuya devices locally via MQTT",
   "homepage": "https://github.com/TheAgentK/tuya-mqtt#readme",
   "main": "tuya-mqtt.js",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/TheAgentK/tuya-mqtt.git"
+  },
   "scripts": {
+    "lint": "eslint . --fix",
     "build": "tsc -p tsconfig.json",
     "start:debug": "cross-env DEBUG=tuya-mqtt:* ts-node tuya-mqtt.ts",
     "start": "cross-env DEBUG=tuya-mqtt:info ts-node tuya-mqtt.ts"
@@ -24,14 +29,16 @@
     "supports-color": "^8.1.0",
     "tuyapi": "^6.1.4"
   },
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/TheAgentK/tuya-mqtt.git"
-  },
   "devDependencies": {
     "@types/mqtt": "^2.5.0",
     "@types/node": "^18.11.9",
+    "@typescript-eslint/eslint-plugin": "^5.42.1",
     "cross-env": "^7.0.3",
+    "eslint": "^8.27.0",
+    "eslint-config-standard-with-typescript": "^23.0.0",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-n": "^15.5.1",
+    "eslint-plugin-promise": "^6.1.1",
     "ts-node": "^10.9.1",
     "typescript": "^4.8.4"
   }
