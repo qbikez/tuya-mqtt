@@ -232,17 +232,17 @@ export default class TuyaDevice {
 
       const dpsTopic = this.baseTopic + "dps";
       // Publish DPS JSON data if not empty
-      let data = {};
+      const messageData = this.dps;
       for (const key in this.dps) {
         // Only publish values if different from previous value
         if (this.dps[key].updated) {
-          data[key] = this.dps[key].val;
+          messageData[key] = this.dps[key].val;
         }
       }
-      data = JSON.stringify(data);
+      const message = JSON.stringify(messageData);
       const dpsStateTopic = dpsTopic + "/state";
-      debugState("MQTT DPS JSON: " + dpsStateTopic + " -> ", data);
-      this.publishMqtt(dpsStateTopic, data);
+      debugState("MQTT DPS JSON: " + dpsStateTopic + " -> ", message);
+      this.publishMqtt(dpsStateTopic, message);
 
       // Publish dps/<#>/state value for each device DPS
       for (const key in this.dps) {

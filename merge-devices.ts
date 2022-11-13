@@ -119,10 +119,7 @@ const main = async () => {
 
   // Sort the devices by name
   configDevices.sort((a, b) => (a.name < b.name ? -1 : 1));
-  const configDevicesJson = json5.stringify(configDevices, {
-    space: "    ",
-    quote: '"',
-  });
+  const configDevicesJson = JSON.stringify(configDevices);
 
   // console.log(configDevicesJson);
 
