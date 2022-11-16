@@ -34,14 +34,14 @@ async function processExit(exitCode) {
 }
 
 // Get new deivce based on configured type
-function getDevice(configDevice: DeviceConfig, mqttClient) {
+function createDevice(deviceConfig: DeviceConfig, mqttClient) {
   const deviceInfo: DeviceInfo = {
-    configDevice,
+    config: deviceConfig,
     mqttClient,
     topic: CONFIG.topic,
     discoveryTopic: CONFIG.discovery_topic,
   };
-  switch (configDevice.type) {
+  switch (deviceConfig.type) {
     case "SimpleCover":
       return new SimpleCover(deviceInfo);
     case "SimpleSwitch":
@@ -54,9 +54,9 @@ function getDevice(configDevice: DeviceConfig, mqttClient) {
   return new GenericDevice(deviceInfo);
 }
 
-function initDevices(configDevices: DeviceConfig[], mqttClient) {
+function initDevices(configDevices: DeviceConfig[], mqttClient: mqtt.MqttClient) {
   for (const configDevice of configDevices) {
-    const newDevice = getDevice(configDevice, mqttClient);
+    const newDevice = createDevice(configDevice, mqttClient);
     tuyaDevices.push(newDevice);
   }
 }
