@@ -8,6 +8,8 @@ const debugState = dbg("tuya-mqtt:state");
 const debugCommand = dbg("tuya-mqtt:command");
 const debugError = dbg("tuya-mqtt:error");
 
+const HEARTBEAT_MS = 10000;
+
 export default class TuyaDevice {
   config: any;
   mqttClient: any;
@@ -28,7 +30,7 @@ export default class TuyaDevice {
   heartbeatsMissed: number;
   reconnecting: boolean;
   baseTopic: string;
-  device: any;
+  device: TuyAPI;
   connected: boolean | undefined;
   isRgbtwLight: any;
   cmdColor: { h: any; s: any; b: any } = { h: 0, s: 0, b: 0 };
@@ -116,6 +118,7 @@ export default class TuyaDevice {
       await utils.sleep(1);
       if (this.device.isConnected()) {
         debug("Connected to device " + this.toString());
+        this.connected = true;
         this.heartbeatsMissed = 0;
         this.publishMqtt(this.baseTopic + "status", "online");
         try {
@@ -129,9 +132,9 @@ export default class TuyaDevice {
 
     // On disconnect perform device specific disconnect
     this.device.on("disconnected", async () => {
+      debug("Disconnected from device " + this.toString());
       this.connected = false;
       this.publishMqtt(this.baseTopic + "status", "offline");
-      debug("Disconnected from device " + this.toString());
       await utils.sleep(5);
       this.reconnect();
     });
@@ -155,6 +158,7 @@ export default class TuyaDevice {
 
   // Get and update cached values of all configured/known dps value for device
   async getStates() {
+    const connectedPrev = this.connected;
     // Suppress topic updates while syncing device state with cached state
     this.connected = false;
     for (const topic in this.deviceTopics) {
@@ -169,7 +173,7 @@ export default class TuyaDevice {
         debugError("Could not get value for device DPS key " + key);
       }
     }
-    this.connected = true;
+    this.connected = connectedPrev;
     // Force topic update now that all states are fully syncronized
     this.publishTopics();
   }
@@ -758,7 +762,7 @@ export default class TuyaDevice {
         }
         this.heartbeatsMissed++;
       }
-    }, 10000);
+    }, HEARTBEAT_MS);
   }
 
   // Publish MQTT
