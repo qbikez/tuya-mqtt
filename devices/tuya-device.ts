@@ -153,9 +153,9 @@ export default class TuyaDevice {
       this.heartbeatsMissed = 0;
     });
   }
-  logError(err: string) {
+  logError(err: unknown) {
     debugError(err);
-    this.publishMqtt(this.baseTopic + "log", err);
+    this.publishMqtt(this.baseTopic + "log", `${err}`);
   }
 
   init() {
