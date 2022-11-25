@@ -10,7 +10,7 @@ export type DeviceInfo = {
 };
 
 export type DeviceTopic = {
-  key: string;
+  key: number;
   type: string;
   [key: string]: any;
 };

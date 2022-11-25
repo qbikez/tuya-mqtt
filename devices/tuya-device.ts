@@ -99,10 +99,7 @@ export default class TuyaDevice {
         this.updateState(data);
       } else {
         if (data !== "json obj data unvalid") {
-          debug(
-            "Received string data from device " + this.options.id + " ->",
-            data.replace(/[^a-zA-Z0-9 ]/g, "")
-          );
+          debug(`Received string data from device ${this.options.id} ->`, data);
         }
       }
     });
@@ -724,9 +721,7 @@ export default class TuyaDevice {
     if (!this.reconnecting) {
       this.reconnecting = true;
       this.logError(
-        "Error connecting to device id " +
-          this.options.id +
-          "...retry in 10 seconds."
+        `Error connecting to device id ${this.options.id}...retry in 10 seconds.`
       );
       await utils.sleep(10);
       this.connectDevice();
@@ -749,9 +744,7 @@ export default class TuyaDevice {
       if (this.connected) {
         if (this.heartbeatsMissed > 3) {
           this.logError(
-            "Device id " +
-              this.options.id +
-              " not responding to heartbeats...disconnecting"
+            `Device id ${this.options.id} not responding to heartbeats...disconnecting`
           );
           this.device.disconnect();
           await utils.sleep(1);
@@ -760,11 +753,7 @@ export default class TuyaDevice {
           const errMessage =
             this.heartbeatsMissed > 1 ? " heartbeats" : " heartbeat";
           this.logError(
-            "Device id " +
-              this.options.id +
-              " has missed " +
-              this.heartbeatsMissed +
-              errMessage
+            `Device id ${this.options.id} has missed ${this.heartbeatsMissed}${errMessage}`
           );
         }
         this.heartbeatsMissed++;

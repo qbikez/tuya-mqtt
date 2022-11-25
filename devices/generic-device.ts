@@ -30,7 +30,7 @@ export default class GenericDevice extends TuyaDevice {
           );
         }
       }
-      this.publishMqtt(this.baseTopic + "schema", result);
+      this.publishMqtt(this.baseTopic + "schema", `${result}`);
     }
 
     // Get initial states and start publishing topics

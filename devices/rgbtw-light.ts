@@ -238,9 +238,9 @@ export default class RGBTWLight extends TuyaDevice {
       debug("Attempting to detect Tuya color format used by device...");
       const color = await this.device.get({ dps: this.guess.dpsColor });
       if (this.guess.dpsPower === 1) {
-        this.guess.colorType = color && color.length === 12 ? "hsb" : "hsbhex";
+        this.guess.colorType = color && (color as any).length === 12 ? "hsb" : "hsbhex";
       } else {
-        this.guess.colorType = color && color.length === 14 ? "hsbhex" : "hsb";
+        this.guess.colorType = color && (color as any).length === 14 ? "hsbhex" : "hsb";
       }
       debug("Detected Tuya color format " + this.guess.colorType.toUpperCase());
     }
