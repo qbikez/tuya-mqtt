@@ -11,6 +11,8 @@ import utils from "./lib/utils";
 import CONFIG from "./config.json";
 import { DeviceConfig, DeviceInfo } from "./interfaces";
 
+const REPUBLISH_PERIOD = 60000;
+
 const debug = dbg("tuya-mqtt:info");
 const debugCommand = dbg("tuya-mqtt:command");
 const debugError = dbg("tuya-mqtt:error");
@@ -171,5 +173,7 @@ const main = async () => {
   });
 };
 
+
+setTimeout(() => republishDevices(), REPUBLISH_PERIOD);
 // Call the main code
 main();

@@ -9,6 +9,8 @@ const debugState = dbg("tuya-mqtt:state");
 const debugCommand = dbg("tuya-mqtt:command");
 const debugError = dbg("tuya-mqtt:error");
 
+const HEARTBEAT_MS = 10000;
+
 export default class TuyaDevice {
   config: DeviceConfig;
   mqttClient: mqtt.MqttClient;
@@ -103,10 +105,7 @@ export default class TuyaDevice {
         }
       } else {
         if (data !== "json obj data unvalid") {
-          debug(
-            "Received string data from device " + this.options.id + " ->",
-            data.replace(/[^a-zA-Z0-9 ]/g, "")
-          );
+          debug(`Received string data from device ${this.options.id} ->`, data);
         }
       }
     });
@@ -122,29 +121,32 @@ export default class TuyaDevice {
       await utils.sleep(1);
       if (this.device.isConnected()) {
         debug("Connected to device " + this.toString());
+        this.connected = true;
         this.heartbeatsMissed = 0;
         this.publishMqtt(this.baseTopic + "status", "online");
+        this.publishMqtt(this.baseTopic + "reason", "device connected");
         try {
           this.init();
           debug("Initiated Device " + this.toString());
         } catch (e) {
-          debugError(`device init failed: ${this.toString()}`);
+          this.logError(`device init failed: ${this.toString()}`);
         }
       }
     });
 
     // On disconnect perform device specific disconnect
     this.device.on("disconnected", async () => {
+      debug("Disconnected from device " + this.toString());
       this.connected = false;
       this.publishMqtt(this.baseTopic + "status", "offline");
-      debug("Disconnected from device " + this.toString());
+      this.publishMqtt(this.baseTopic + "reason", "device disconnected");
       await utils.sleep(5);
       this.reconnect();
     });
 
     // On connect error call reconnect
     this.device.on("error", async (err) => {
-      debugError(err);
+      this.logError(err);
       await utils.sleep(1);
       this.reconnect();
     });
@@ -154,6 +156,10 @@ export default class TuyaDevice {
       this.heartbeatsMissed = 0;
     });
   }
+  logError(err: unknown) {
+    debugError(err);
+    this.publishMqtt(this.baseTopic + "log", `${err}`);
+  }
 
   init() {
     throw new Error("Method not implemented.");
@@ -161,6 +167,7 @@ export default class TuyaDevice {
 
   // Get and update cached values of all configured/known dps value for device
   async getStates() {
+    const connectedPrev = this.connected;
     // Suppress topic updates while syncing device state with cached state
     this.connected = false;
     for (const topic in this.deviceTopics) {
@@ -172,10 +179,10 @@ export default class TuyaDevice {
         this.dps[key].val = await this.device.get({ dps: key });
         this.dps[key].updated = true;
       } catch {
-        debugError("Could not get value for device DPS key " + key);
+        this.logError("Could not get value for device DPS key " + key);
       }
     }
-    this.connected = true;
+    this.connected = connectedPrev;
     // Force topic update now that all states are fully syncronized
     this.publishTopics();
   }
@@ -253,7 +260,7 @@ export default class TuyaDevice {
         }
       }
     } catch (e) {
-      debugError(e);
+      this.logError(e);
     }
   }
 
@@ -486,22 +493,22 @@ export default class TuyaDevice {
     if (isNaN(command)) {
       return invalid;
     } else if (deviceTopic.topicMin && command < deviceTopic.topicMin) {
-      debugError(
+      this.logError(
         'Received command value "' +
           command +
           '" that is less than the configured minimum value'
       );
-      debugError(
+      this.logError(
         "Overriding command with minimum value " + deviceTopic.topicMin
       );
       command = deviceTopic.topicMin;
     } else if (deviceTopic.topicMax && command > deviceTopic.topicMax) {
-      debugError(
+      this.logError(
         'Received command value "' +
           command +
           '" that is greater than the configured maximum value'
       );
-      debugError(
+      this.logError(
         "Overriding command with maximum value: " + deviceTopic.topicMax
       );
       command = deviceTopic.topicMax;
@@ -557,13 +564,13 @@ export default class TuyaDevice {
         debug("Found device id " + this.options.id);
         // Attempt connection to device
         this.device.connect().catch((error) => {
-          debugError(error.message);
+          this.logError(error.message);
           this.reconnect();
         });
       })
       .catch(async (error) => {
-        debugError(error.message);
-        debugError("Will attempt to find device again in 60 seconds");
+        this.logError(error.message);
+        this.logError("Will attempt to find device again in 60 seconds");
         await utils.sleep(60);
         this.connectDevice();
       });
@@ -573,10 +580,8 @@ export default class TuyaDevice {
   async reconnect() {
     if (!this.reconnecting) {
       this.reconnecting = true;
-      debugError(
-        "Error connecting to device id " +
-          this.options.id +
-          "...retry in 10 seconds."
+      this.logError(
+        `Error connecting to device id ${this.options.id}...retry in 10 seconds.`
       );
       await utils.sleep(10);
       this.connectDevice();
@@ -588,6 +593,7 @@ export default class TuyaDevice {
   async republish() {
     const status = this.device.isConnected() ? "online" : "offline";
     this.publishMqtt(this.baseTopic + "status", status);
+    this.publishMqtt(this.baseTopic + "reason", `device isConnected=${status}`);
     await utils.sleep(1);
     this.init();
   }
@@ -597,10 +603,8 @@ export default class TuyaDevice {
     setInterval(async () => {
       if (this.connected) {
         if (this.heartbeatsMissed > 3) {
-          debugError(
-            "Device id " +
-              this.options.id +
-              " not responding to heartbeats...disconnecting"
+          this.logError(
+            `Device id ${this.options.id} not responding to heartbeats...disconnecting`
           );
           this.device.disconnect();
           await utils.sleep(1);
@@ -608,17 +612,13 @@ export default class TuyaDevice {
         } else if (this.heartbeatsMissed > 0) {
           const errMessage =
             this.heartbeatsMissed > 1 ? " heartbeats" : " heartbeat";
-          debugError(
-            "Device id " +
-              this.options.id +
-              " has missed " +
-              this.heartbeatsMissed +
-              errMessage
+          this.logError(
+            `Device id ${this.options.id} has missed ${this.heartbeatsMissed}${errMessage}`
           );
         }
         this.heartbeatsMissed++;
       }
-    }, 10000);
+    }, HEARTBEAT_MS);
   }
 
   // Publish MQTT
