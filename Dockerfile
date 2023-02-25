@@ -8,4 +8,6 @@ RUN npm ci
 
 COPY . .
 
+RUN npx patch-package
+
 CMD ["npm", "run", "start"]
