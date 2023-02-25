@@ -90,7 +90,7 @@ export default class TuyaDevice {
     }
 
     this.options.disconnectOnMissedPing = false;
-    
+
     // Create the new Tuya Device
     this.device = new TuyAPI(JSON.parse(JSON.stringify(this.options)));
 
@@ -176,12 +176,13 @@ export default class TuyaDevice {
     this.connected = false;
     for (const topic in this.deviceTopics) {
       const key = this.deviceTopics[topic].key;
-      if (!this.dps[key]) {
-        this.dps[key] = {};
-      }
+
       try {
-        this.dps[key].val = await this.device.get({ dps: key });
-        this.dps[key].updated = true;
+        const val = await this.device.get({ dps: key });
+        this.dps[key] = {
+          val,
+          updated: true,
+        };
       } catch {
         this.logError("Could not get value for device DPS key " + key);
       }
@@ -239,7 +240,7 @@ export default class TuyaDevice {
       const dpsTopic = this.baseTopic + "dps";
       // Publish DPS JSON data if not empty
       const messageData = this.dps;
-      
+
       // TODO: decide which format is correct?
       // for (const key in this.dps) {
       //   // Only publish values if different from previous value
@@ -421,8 +422,8 @@ export default class TuyaDevice {
   }
 
   // Set state based on command topic
-  sendTuyaCommand(message: string, deviceTopic: DeviceTopic) {
-    let command = message.toLowerCase();
+  sendTuyaCommand(message: string | {}, deviceTopic: DeviceTopic) {
+    let command = message; //.toLowerCase();
     const tuyaCommand: Record<string, any> = {};
     tuyaCommand.dps = deviceTopic.key;
     switch (deviceTopic.type) {
@@ -431,25 +432,25 @@ export default class TuyaDevice {
           tuyaCommand.set = !this.dps[tuyaCommand.dps].val;
         } else {
           command = this.parseBoolCommand(command);
-          // if (typeof command.set === 'boolean') {
-          tuyaCommand.set = command.set;
-          // } else {
-          //     tuyaCommand.set = '!!!INVALID!!!'
-          // }
+          if (typeof (command as { set: boolean }).set === "boolean") {
+            tuyaCommand.set = (command as { set: boolean }).set;
+          } else {
+            tuyaCommand.set = "!!!INVALID!!!";
+          }
         }
         break;
       case "int":
       case "float":
         tuyaCommand.set = this.parseNumberCommand(command, deviceTopic);
         break;
-      case "hsb":
-        this.updateCommandColor(command, deviceTopic.components);
-        tuyaCommand.set = this.parseTuyaHsbColor();
-        break;
-      case "hsbhex":
-        this.updateCommandColor(command, deviceTopic.components);
-        tuyaCommand.set = this.parseTuyaHsbHexColor();
-        break;
+      // case "hsb":
+      //   this.updateCommandColor(command, deviceTopic.components);
+      //   tuyaCommand.set = this.parseTuyaHsbColor();
+      //   break;
+      // case "hsbhex":
+      //   this.updateCommandColor(command, deviceTopic.components);
+      //   tuyaCommand.set = this.parseTuyaHsbHexColor();
+      //   break;
       default:
         // If type is not one of the above just use the raw string as is
         tuyaCommand.set = message;
@@ -457,17 +458,17 @@ export default class TuyaDevice {
     if (tuyaCommand.set === "!!!INVALID!!!") {
       return false;
     } else {
-      if (this.isRgbtwLight) {
-        this.setLight(deviceTopic, tuyaCommand);
-      } else {
-        this.set(tuyaCommand);
-      }
+      // if (this.isRgbtwLight) {
+      //   this.setLight(deviceTopic, tuyaCommand);
+      // } else {
+      this.set(tuyaCommand);
+      //}
       return true;
     }
   }
 
   // Convert simple bool commands to true/false
-  parseBoolCommand(command) {
+  parseBoolCommand(command: string | {}): { set: boolean } | string | {} {
     switch (command) {
       case "on":
       case "off":
@@ -540,7 +541,6 @@ export default class TuyaDevice {
 
     return value;
   }
-
 
   // Simple function to help debug output
   toString() {

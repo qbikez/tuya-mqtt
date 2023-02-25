@@ -4,8 +4,8 @@ import mqtt from "mqtt";
 import dbg from "debug";
 import SimpleCover from "./devices/simple-cover";
 import SimpleSwitch from "./devices/simple-switch";
-import SimpleDimmer from "./devices/simple-dimmer";
-import RGBTWLight from "./devices/rgbtw-light";
+//import SimpleDimmer from "./devices/simple-dimmer";
+//import RGBTWLight from "./devices/rgbtw-light";
 import GenericDevice from "./devices/generic-device";
 import utils from "./lib/utils";
 import CONFIG from "./config.json";
@@ -48,10 +48,10 @@ function createDevice(deviceConfig: DeviceConfig, mqttClient) {
       return new SimpleCover(deviceInfo);
     case "SimpleSwitch":
       return new SimpleSwitch(deviceInfo);
-    case "SimpleDimmer":
-      return new SimpleDimmer(deviceInfo);
-    case "RGBTWLight":
-      return new RGBTWLight(deviceInfo);
+    // case "SimpleDimmer":
+    //   return new SimpleDimmer(deviceInfo);
+    // case "RGBTWLight":
+    //   return new RGBTWLight(deviceInfo);
   }
   return new GenericDevice(deviceInfo);
 }

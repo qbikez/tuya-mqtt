@@ -11,7 +11,7 @@
   "scripts": {
     "lint": "eslint . --fix",
     "build": "tsc -p tsconfig.json",
-    "start:debug": "cross-env DEBUG=tuya-mqtt:* ts-node tuya-mqtt.ts",
+    "start:debug": "cross-env DEBUG=tuya-mqtt:*,TuyAPI ts-node tuya-mqtt.ts",
     "start": "cross-env ts-node tuya-mqtt.ts",
     "watch": "cross-env DEBUG=tuya-mqtt:* ts-node tuya-mqtt.ts --watch",
     "postinstall": "patch-package"

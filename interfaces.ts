@@ -3,11 +3,11 @@ export type DeviceConfig = {
   id: string;
   key: string;
   name?: string;
-  template?: string;
+  template?: Record<string, DeviceTopic>;
   version?: string;
   ip?: string;
   dpsMode?: string;
-  dpsPower?: string;
+  dpsPower?: number;
 };
 
 export type DeviceInfo = {
