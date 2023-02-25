@@ -10,6 +10,7 @@ const debugCommand = dbg("tuya-mqtt:command");
 const debugError = dbg("tuya-mqtt:error");
 
 const HEARTBEAT_MS = 10000;
+const MAX_HEARTBEAT_MISSED = 3;
 
 export default class TuyaDevice {
   config: DeviceConfig;
@@ -22,6 +23,7 @@ export default class TuyaDevice {
     name?: string;
     ip?: string;
     version?: string;
+    disconnectOnMissedPing?: boolean;
   };
   deviceData: { ids: any[]; name: any; mf: string; mdl?: any };
   dps: DPS;
@@ -87,6 +89,8 @@ export default class TuyaDevice {
       this.baseTopic = `${this.topic}/${this.options.id}/`;
     }
 
+    this.options.disconnectOnMissedPing = false;
+    
     // Create the new Tuya Device
     this.device = new TuyAPI(JSON.parse(JSON.stringify(this.options)));
 
@@ -602,7 +606,7 @@ export default class TuyaDevice {
   monitorHeartbeat() {
     setInterval(async () => {
       if (this.connected) {
-        if (this.heartbeatsMissed > 3) {
+        if (this.heartbeatsMissed > MAX_HEARTBEAT_MISSED) {
           this.logError(
             `Device id ${this.options.id} not responding to heartbeats...disconnecting`
           );
