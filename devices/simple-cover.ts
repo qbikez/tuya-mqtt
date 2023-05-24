@@ -45,6 +45,8 @@ export default class SimpleCover extends TuyaDevice {
       unique_id: this.options.name,
       device: this.deviceData,
       position_topic: `${this.baseTopic}position`,
+      set_position_topic: `${this.baseTopic}set_position`,
+      optimistic: true,
     };
 
     debugDiscovery("Home Assistant config topic: " + configTopic);
@@ -54,7 +56,11 @@ export default class SimpleCover extends TuyaDevice {
 
   override publishTopics(): void {
     super.publishTopics();
-    this.publishMqtt(this.baseTopic + "position", "50");
+    const deviceTopic = this.deviceTopics["state"];
+    const key = deviceTopic.key;
+    const state = this.getFriendlyState(deviceTopic, this.dps[key].val);
+    const position = state == "opening" ? 0 : state == "closing" ? 100 : 50;
+    this.publishMqtt(this.baseTopic + "position", `${position}`);
   }
 
   override parseStringState(value: unknown): string {
