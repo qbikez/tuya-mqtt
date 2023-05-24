@@ -51,7 +51,7 @@ export default class SimpleCover extends TuyaDevice {
 
     debugDiscovery("Home Assistant config topic: " + configTopic);
     debugDiscovery(discoveryData);
-    this.publishMqtt(configTopic, JSON.stringify(discoveryData));
+    this.publishMqtt(configTopic, JSON.stringify(discoveryData), { qos: 1, retain: true });
   }
 
   override publishTopics(): void {
