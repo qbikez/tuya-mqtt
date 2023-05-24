@@ -10,6 +10,7 @@ import GenericDevice from "./devices/generic-device";
 import utils from "./lib/utils";
 import CONFIG from "./config.json";
 import { DeviceConfig, DeviceInfo } from "./interfaces";
+import TuyaDevice from "./devices/tuya-device";
 
 const REPUBLISH_PERIOD = 60000;
 
@@ -17,7 +18,7 @@ const debug = dbg("tuya-mqtt:info");
 const debugCommand = dbg("tuya-mqtt:command");
 const debugError = dbg("tuya-mqtt:error");
 
-const tuyaDevices: any[] = [];
+const tuyaDevices: TuyaDevice[] = [];
 
 // Setup Exit Handlers
 process.on("exit", processExit.bind(0));
@@ -154,6 +155,12 @@ const main = async () => {
             d.options.name === deviceTopicLevel ||
             d.options.id === deviceTopicLevel
         );
+
+        if (!device) {
+          debugError(`Device for topic '${deviceTopicLevel}' not found!`);
+          return;
+        }
+
         switch (topicLength) {
           case 3:
             device.processCommand(message, commandTopic);
@@ -165,6 +172,8 @@ const main = async () => {
             const dpsKey = splitTopic[topicLength - 2];
             device.processDpsKeyCommand(message, dpsKey);
             break;
+          default:
+            debugError(`Invalid command topic: ${topic}`);
         }
       }
     } catch (e) {

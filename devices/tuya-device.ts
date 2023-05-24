@@ -4,6 +4,7 @@ import utils from "../lib/utils";
 import dbg from "debug";
 import { DeviceConfig, DeviceInfo, DeviceTopic, DPS } from "../interfaces";
 import * as mqtt from "mqtt";
+import { IClientPublishOptions } from "mqtt";
 const debug = dbg("tuya-mqtt:tuyapi");
 const debugState = dbg("tuya-mqtt:state");
 const debugCommand = dbg("tuya-mqtt:command");
@@ -332,7 +333,7 @@ export default class TuyaDevice {
   }
 
   // Initial processing of MQTT commands for all command topics
-  processCommand(message: string, commandTopic: string) {
+  public processCommand(message: string, commandTopic: string) {
     // eslint-disable-next-line @typescript-eslint/ban-types
     let command: string | {};
     if (utils.isJsonString(message)) {
@@ -383,7 +384,7 @@ export default class TuyaDevice {
   }
 
   // Process Tuya JSON commands via DPS command topic
-  processDpsCommand(message) {
+  public processDpsCommand(message) {
     if (utils.isJsonString(message)) {
       const command = JSON.parse(message);
       debugCommand("Parsed Tuya JSON command: " + JSON.stringify(command));
@@ -394,7 +395,7 @@ export default class TuyaDevice {
   }
 
   // Process text based Tuya commands via DPS key command topics
-  processDpsKeyCommand(message, dpsKey) {
+  public processDpsKeyCommand(message, dpsKey) {
     if (utils.isJsonString(message)) {
       debugCommand("Individual DPS command topics do not accept JSON values");
     } else {
@@ -594,7 +595,7 @@ export default class TuyaDevice {
   }
 
   // Republish device discovery/state data (used for Home Assistant state topic)
-  async republish() {
+  public async republish() {
     const status = this.device.isConnected() ? "online" : "offline";
     this.publishMqtt(this.baseTopic + "status", status);
     this.publishMqtt(this.baseTopic + "reason", `device isConnected=${status}`);
@@ -626,8 +627,12 @@ export default class TuyaDevice {
   }
 
   // Publish MQTT
-  publishMqtt(topic: string, message: string) {
+  publishMqtt(
+    topic: string,
+    message: string,
+    opts: IClientPublishOptions = { qos: 1 }
+  ) {
     debugState(topic, message);
-    this.mqttClient.publish(topic, message, { qos: 1 });
+    this.mqttClient.publish(topic, message, opts);
   }
 }
