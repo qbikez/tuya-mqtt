@@ -139,7 +139,7 @@ const main = async () => {
         if (message === "online") {
           republishDevices();
         }
-      } else if (commandTopic.includes("command")) {
+      } else if (commandTopic.includes("command") || commandTopic.startsWith("set")) {
         // If it looks like a valid command topic try to process it
         debugCommand(
           "Received MQTT message -> ",

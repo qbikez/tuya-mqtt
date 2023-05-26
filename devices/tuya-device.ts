@@ -376,7 +376,24 @@ export default class TuyaDevice {
           `Command topic ${this.baseTopic}${commandTopic} received invalid value: ${command}`
         );
       }
-    } else {
+    }
+    else if (commandTopic === "set_position") {
+      debugCommand(
+        `Device ${
+          this.options.id
+        } received command topic: ${commandTopic}, message: ${JSON.stringify(
+          command
+        )}`
+      );
+      if (command === "100") {
+        this.processDeviceCommand("close", "command");
+      }
+      if (command === "0") {
+        this.processDeviceCommand("open", "command");
+      }
+      
+    } 
+    else {
       debugCommand(
         `Invalid command topic ${this.baseTopic}${commandTopic} for device id: ${this.config.id}. Expected '${deviceTopic}'.`
       );
