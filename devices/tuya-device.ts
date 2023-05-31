@@ -100,7 +100,7 @@ export default class TuyaDevice {
     this.device.on("data", (data: string | { dps: {} }) => {
       if (typeof data === "object") {
         debug(
-          "Received JSON data from device " + this.options.id + " ->",
+          `Received JSON data from device ${this.toString()} ->`,
           JSON.stringify(data.dps)
         );
         this.updateState(data);
@@ -110,7 +110,7 @@ export default class TuyaDevice {
         }
       } else {
         if (data !== "json obj data unvalid") {
-          debug(`Received string data from device ${this.options.id} ->`, data);
+          debug(`Received string data from device ${this.toString()} ->`, data);
         }
       }
     });
@@ -125,14 +125,14 @@ export default class TuyaDevice {
       // Wait one second to check if device is really connected before initializing
       await utils.sleep(1);
       if (this.device.isConnected()) {
-        debug("Connected to device " + this.toString());
+        debug(`Connected to device ${this.toString()}`);
         this.connected = true;
         this.heartbeatsMissed = 0;
         this.publishMqtt(this.baseTopic + "status", "online");
         this.publishMqtt(this.baseTopic + "reason", "device connected");
         try {
           this.init();
-          debug("Initiated Device " + this.toString());
+          debug(`Initiated Device ${this.toString()}`);
         } catch (e) {
           this.logError(`device init failed: ${this.toString()}`);
         }
@@ -141,10 +141,10 @@ export default class TuyaDevice {
 
     // On disconnect perform device specific disconnect
     this.device.on("disconnected", async () => {
-      debug("Disconnected from device " + this.toString());
+      debug(`Disconnected from device ${this.toString()}`);
       this.connected = false;
-      this.publishMqtt(this.baseTopic + "status", "offline");
-      this.publishMqtt(this.baseTopic + "reason", "device disconnected");
+      this.publishMqtt(`${this.baseTopic}status`, "offline");
+      this.publishMqtt(`${this.baseTopic}reason`, "device disconnected");
       await utils.sleep(5);
       this.reconnect();
     });
@@ -185,7 +185,7 @@ export default class TuyaDevice {
           updated: true,
         };
       } catch {
-        this.logError("Could not get value for device DPS key " + key);
+        this.logError(`Could not get value for device DPS key ${key}`);
       }
     }
     this.connected = connectedPrev;
@@ -251,7 +251,7 @@ export default class TuyaDevice {
       // }
       const message = JSON.stringify(messageData);
       const dpsStateTopic = dpsTopic + "/state";
-      debugState("MQTT DPS JSON: " + dpsStateTopic + " -> ", message);
+      debugState(`MQTT DPS JSON: ${dpsStateTopic} -> `, message);
       this.publishMqtt(dpsStateTopic, message);
 
       // Publish dps/<#>/state value for each device DPS
@@ -260,7 +260,7 @@ export default class TuyaDevice {
         if (this.dps[key].updated) {
           const dpsKeyTopic = dpsTopic + "/" + key + "/state";
           const data = this.dps[key]?.val?.toString() || "None";
-          debugState("MQTT DPS" + key + ": " + dpsKeyTopic + " -> ", data);
+          debugState(`MQTT DPS${key}: ${dpsKeyTopic} -> `, data);
           this.publishMqtt(dpsKeyTopic, data);
           this.dps[key].updated = false;
         }
@@ -364,9 +364,7 @@ export default class TuyaDevice {
 
     if (deviceTopic) {
       debugCommand(
-        `Device ${
-          this.options.id
-        } received command topic: ${commandTopic}, message: ${JSON.stringify(
+        `Device ${this.toString()} received command topic: ${commandTopic}, message: ${JSON.stringify(
           command
         )}`
       );
@@ -376,12 +374,9 @@ export default class TuyaDevice {
           `Command topic ${this.baseTopic}${commandTopic} received invalid value: ${command}`
         );
       }
-    }
-    else if (commandTopic === "set_position") {
+    } else if (commandTopic === "set_position") {
       debugCommand(
-        `Device ${
-          this.options.id
-        } received command topic: ${commandTopic}, message: ${JSON.stringify(
+        `Device ${this.toString()} received command topic: ${commandTopic}, message: ${JSON.stringify(
           command
         )}`
       );
@@ -391,11 +386,9 @@ export default class TuyaDevice {
       if (command === "0") {
         this.processDeviceCommand("open", "command");
       }
-      
-    } 
-    else {
+    } else {
       debugCommand(
-        `Invalid command topic ${this.baseTopic}${commandTopic} for device id: ${this.config.id}. Expected '${deviceTopic}'.`
+        `Invalid command topic ${this.baseTopic}${commandTopic} for device ${this.toString()}. Expected '${deviceTopic}'.`
       );
     }
   }
@@ -404,7 +397,7 @@ export default class TuyaDevice {
   public processDpsCommand(message) {
     if (utils.isJsonString(message)) {
       const command = JSON.parse(message);
-      debugCommand("Parsed Tuya JSON command: " + JSON.stringify(command));
+      debugCommand(`Parsed Tuya JSON command: ${JSON.stringify(command)}`);
       this.set(command);
     } else {
       debugCommand("DPS command topic requires Tuya style JSON value");
@@ -417,7 +410,7 @@ export default class TuyaDevice {
       debugCommand("Individual DPS command topics do not accept JSON values");
     } else {
       const dpsMessage = this.parseDpsMessage(message);
-      debugCommand("Received command for DPS" + dpsKey + ": ", message);
+      debugCommand(`Received command for DPS${dpsKey}: `, message);
       const command = {
         dps: dpsKey,
         set: dpsMessage,
@@ -568,7 +561,8 @@ export default class TuyaDevice {
   }
 
   async set(command) {
-    debug("Set device " + this.options.id + " -> " + JSON.stringify(command));
+    debug(`Set device ${this.options.id} -> ${JSON.stringify(command)}`);
+
     return await new Promise((resolve) => {
       this.device.set(command).then((result) => {
         resolve(result);
@@ -579,11 +573,11 @@ export default class TuyaDevice {
   // Search for and connect to device
   connectDevice() {
     // Find device on network
-    debug("Search for device id " + this.options.id);
+    debug(`Search for device ${this.toString()}`);
     this.device
       .find()
       .then(() => {
-        debug("Found device id " + this.options.id);
+        debug(`Found device ${this.toString()}`);
         // Attempt connection to device
         this.device.connect().catch((error) => {
           this.logError(error.message);
@@ -603,7 +597,7 @@ export default class TuyaDevice {
     if (!this.reconnecting) {
       this.reconnecting = true;
       this.logError(
-        `Error connecting to device id ${this.options.id}...retry in 10 seconds.`
+        `Error connecting to device ${this.toString()}...retry in 10 seconds.`
       );
       await utils.sleep(10);
       this.connectDevice();
@@ -614,8 +608,8 @@ export default class TuyaDevice {
   // Republish device discovery/state data (used for Home Assistant state topic)
   public async republish() {
     const status = this.device.isConnected() ? "online" : "offline";
-    this.publishMqtt(this.baseTopic + "status", status);
-    this.publishMqtt(this.baseTopic + "reason", `device isConnected=${status}`);
+    this.publishMqtt(`${this.baseTopic}status`, status);
+    this.publishMqtt(`${this.baseTopic}reason`, `device isConnected=${status}`);
     await utils.sleep(1);
     this.init();
   }
@@ -626,7 +620,7 @@ export default class TuyaDevice {
       if (this.connected) {
         if (this.heartbeatsMissed > MAX_HEARTBEAT_MISSED) {
           this.logError(
-            `Device id ${this.options.id} not responding to heartbeats...disconnecting`
+            `Device ${this.toString()} not responding to heartbeats...disconnecting`
           );
           this.device.disconnect();
           await utils.sleep(1);
@@ -635,7 +629,9 @@ export default class TuyaDevice {
           const errMessage =
             this.heartbeatsMissed > 1 ? " heartbeats" : " heartbeat";
           this.logError(
-            `Device id ${this.options.id} has missed ${this.heartbeatsMissed}${errMessage}`
+            `Device ${this.toString()} has missed ${
+              this.heartbeatsMissed
+            }${errMessage}`
           );
         }
         this.heartbeatsMissed++;
