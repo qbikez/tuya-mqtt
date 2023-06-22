@@ -10,6 +10,7 @@ import GenericDevice from "./devices/generic-device";
 import utils from "./lib/utils";
 import CONFIG from "./config.json";
 import { DeviceConfig, DeviceInfo } from "./interfaces";
+import { connectMqtt } from "./lib/mqtt";
 
 const REPUBLISH_PERIOD = 60000;
 
@@ -17,7 +18,7 @@ const debug = dbg("tuya-mqtt:info");
 const debugCommand = dbg("tuya-mqtt:command");
 const debugError = dbg("tuya-mqtt:error");
 
-const tuyaDevices: any[] = [];
+const tuyaDevices: Array<ReturnType<typeof createDevice>> = [];
 
 // Setup Exit Handlers
 process.on("exit", processExit.bind(0));
@@ -36,13 +37,14 @@ async function processExit(exitCode) {
 }
 
 // Get new deivce based on configured type
-function getDevice(configDevice: DeviceConfig) {
+function createDevice(deviceConfig: DeviceConfig) {
   const deviceInfo: DeviceInfo = {
-    configDevice,
+    config: deviceConfig,
     topic: CONFIG.topic,
     discoveryTopic: CONFIG.discovery_topic,
   };
-  switch (configDevice.type) {
+
+  switch (deviceConfig.type) {
     case "SimpleCover":
       return new SimpleCover(deviceInfo);
     case "SimpleSwitch":
@@ -51,13 +53,14 @@ function getDevice(configDevice: DeviceConfig) {
       return new SimpleDimmer(deviceInfo);
     case "RGBTWLight":
       return new RGBTWLight(deviceInfo);
+    default:
+      return new GenericDevice(deviceInfo);
   }
-  return new GenericDevice(deviceInfo);
 }
 
 function initDevices(configDevices: DeviceConfig[]) {
   for (const configDevice of configDevices) {
-    const newDevice = getDevice(configDevice);
+    const newDevice = createDevice(configDevice);
     tuyaDevices.push(newDevice);
   }
 }
@@ -74,29 +77,8 @@ async function republishDevices() {
   }
 }
 
-// Main code function
-const main = async () => {
-  let configDevices: DeviceConfig[] = [];
-  try {
-    const content = fs.readFileSync("./devices.json", "utf8");
-    configDevices = JSON.parse(content);
-  } catch (e) {
-    console.error("Devices file not found!");
-    debugError(e);
-    process.exit(1);
-  }
-
-  if (configDevices.length === 0) {
-    console.error("No devices found in devices file!");
-    process.exit(1);
-  }
-
-  const mqttClient = mqtt.connect({
-    host: CONFIG.host,
-    port: CONFIG.port,
-    username: CONFIG.mqtt_user,
-    password: CONFIG.mqtt_pass,
-  });
+const initMQtt = () => {
+  const mqttClient = connectMqtt(CONFIG);
 
   mqttClient.on("connect", function (err) {
     debug("Connection established to MQTT server");
@@ -104,7 +86,6 @@ const main = async () => {
     mqttClient.subscribe(topic);
     const statusTopic = CONFIG.status_topic || "homeassistant/status";
     mqttClient.subscribe(statusTopic);
-    initDevices(configDevices);
   });
 
   mqttClient.on("reconnect", function (error) {
@@ -153,6 +134,10 @@ const main = async () => {
             d.options.name === deviceTopicLevel ||
             d.options.id === deviceTopicLevel
         );
+        if (!device) {
+          debugError(`Device for topic level ${deviceTopicLevel} not found!`);
+          return;
+        }
         switch (topicLength) {
           case 3:
             device.processCommand(message, commandTopic);
@@ -172,6 +157,27 @@ const main = async () => {
   });
 };
 
+// Main code function
+const main = async () => {
+  let configDevices: DeviceConfig[] = [];
+  try {
+    const content = fs.readFileSync("./devices.json", "utf8");
+    configDevices = JSON.parse(content);
+  } catch (e) {
+    console.error("Devices file not found!");
+    debugError(e);
+    process.exit(1);
+  }
+
+  initDevices(configDevices);
+
+  initMQtt();
+
+  if (configDevices.length === 0) {
+    console.error("No devices found in devices file!");
+    process.exit(1);
+  }
+};
 
 setTimeout(() => republishDevices(), REPUBLISH_PERIOD);
 // Call the main code

@@ -1,18 +1,14 @@
 import TuyAPI from "tuyapi";
 import { evaluate } from "mathjs";
 import utils from "../lib/utils";
-import dbg from "debug";
-import { DeviceInfo, DeviceTopic } from "../interfaces";
-const debug = dbg("tuya-mqtt:tuyapi");
-const debugState = dbg("tuya-mqtt:state");
-const debugCommand = dbg("tuya-mqtt:command");
-const debugError = dbg("tuya-mqtt:error");
+import { DeviceConfig, DeviceInfo, DeviceTopic, DPS } from "../interfaces";
+import { debug, debugState } from "../lib/logging";
+import { mqttClient } from "../lib/mqtt";
 
 const HEARTBEAT_MS = 10000;
 
 export default class TuyaDevice {
-  config: any;
-  mqttClient: any;
+  config: DeviceConfig;
   topic: string;
   discoveryTopic: string;
   options: {
@@ -23,7 +19,7 @@ export default class TuyaDevice {
     version?: string;
   };
   deviceData: { ids: any[]; name: any; mf: string; mdl?: any };
-  dps: Record<string, any>;
+  dps: DPS;
   color: { h: number; s: number; b: number };
   // eslint-disable-next-line @typescript-eslint/ban-types
   deviceTopics: Record<string, DeviceTopic>;
@@ -36,8 +32,7 @@ export default class TuyaDevice {
   cmdColor: { h: any; s: any; b: any } = { h: 0, s: 0, b: 0 };
 
   constructor(deviceInfo: DeviceInfo) {
-    this.config = deviceInfo.configDevice;
-    this.mqttClient = deviceInfo.mqttClient;
+    this.config = deviceInfo.config;
     this.topic = deviceInfo.topic;
     this.discoveryTopic = deviceInfo.discoveryTopic;
 
@@ -90,13 +85,18 @@ export default class TuyaDevice {
     this.device = new TuyAPI(JSON.parse(JSON.stringify(this.options)));
 
     // Listen for device data and call update DPS function if valid
-    this.device.on("data", (data) => {
+    // eslint-disable-next-line @typescript-eslint/ban-types
+    this.device.on("data", (data: string | { dps: {} }) => {
       if (typeof data === "object") {
         debug(
           "Received JSON data from device " + this.options.id + " ->",
           JSON.stringify(data.dps)
         );
         this.updateState(data);
+
+        if (this.connected) {
+          this.publishTopics();
+        }
       } else {
         if (data !== "json obj data unvalid") {
           debug(`Received string data from device ${this.options.id} ->`, data);
@@ -182,8 +182,9 @@ export default class TuyaDevice {
   }
 
   // Update cached DPS values on data updates
-  updateState(data) {
-    if (typeof data.dps !== "undefined") {
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  updateState(data: { dps: { [key: string]: {} } | undefined }) {
+    if (data.dps !== undefined) {
       // Update cached device state data
       for (const key in data.dps) {
         // Only update if the received value is different from previous value
@@ -193,18 +194,6 @@ export default class TuyaDevice {
             updated: true,
           };
         }
-        if (this.isRgbtwLight) {
-          if (this.config.dpsColor && this.config.dpsColor == key) {
-            this.updateColorState(data.dps[key]);
-          } else if (this.config.dpsMode && this.config.dpsMode == key) {
-            // If color/white mode is changing, force sending color state
-            // Allows overriding saturation value to 0% for white mode for the HSB device topics
-            this.dps[this.config.dpsColor].updated = true;
-          }
-        }
-      }
-      if (this.connected) {
-        this.publishTopics();
       }
     }
   }
@@ -240,12 +229,14 @@ export default class TuyaDevice {
       const dpsTopic = this.baseTopic + "dps";
       // Publish DPS JSON data if not empty
       const messageData = this.dps;
-      for (const key in this.dps) {
-        // Only publish values if different from previous value
-        if (this.dps[key].updated) {
-          messageData[key] = this.dps[key].val;
-        }
-      }
+      
+      // TODO: decide which format is correct?
+      // for (const key in this.dps) {
+      //   // Only publish values if different from previous value
+      //   if (this.dps[key].updated) {
+      //     messageData[key] = this.dps[key].val;
+      //   }
+      // }
       const message = JSON.stringify(messageData);
       const dpsStateTopic = dpsTopic + "/state";
       debugState("MQTT DPS JSON: " + dpsStateTopic + " -> ", message);
@@ -287,7 +278,7 @@ export default class TuyaDevice {
           // If light is in white mode always report saturation 0%, otherwise report actual value
           state.push(
             components[i] === "s" &&
-              this.dps[this.config.dpsMode].val === "white"
+              this.dps[this.config.dpsMode!].val === "white"
               ? 0
               : this.color[components[i]]
           );
@@ -330,8 +321,9 @@ export default class TuyaDevice {
   }
 
   // Initial processing of MQTT commands for all command topics
-  processCommand(message, commandTopic) {
-    let command;
+  processCommand(message: string, commandTopic: string) {
+    // eslint-disable-next-line @typescript-eslint/ban-types
+    let command: string | {};
     if (utils.isJsonString(message)) {
       debugCommand("Received MQTT command message is a JSON string");
       command = JSON.parse(message);
@@ -419,7 +411,7 @@ export default class TuyaDevice {
   }
 
   // Set state based on command topic
-  sendTuyaCommand(message, deviceTopic) {
+  sendTuyaCommand(message: string, deviceTopic: DeviceTopic) {
     let command = message.toLowerCase();
     const tuyaCommand: Record<string, any> = {};
     tuyaCommand.dps = deviceTopic.key;
@@ -539,144 +531,6 @@ export default class TuyaDevice {
     return value;
   }
 
-  // Takes Tuya color value in HSB or HSBHEX format and updates cached HSB color state for device
-  // Credit homebridge-tuya project for HSB/HSBHEX conversion code
-  updateColorState(value) {
-    let h, s, b;
-    if (this.config.colorType === "hsbhex") {
-      [, h, s, b] = (value || "0000000000ffff").match(
-        /^.{6}([0-9a-f]{4})([0-9a-f]{2})([0-9a-f]{2})$/i
-      ) || [0, "0", "ff", "ff"];
-      this.color.h = parseInt(h, 16);
-      this.color.s = Math.round(parseInt(s, 16) / 2.55); // Convert saturation to 100 scale
-      this.color.b = Math.round(parseInt(b, 16) / 2.55); // Convert brightness to 100 scale
-    } else {
-      [, h, s, b] = (value || "000003e803e8").match(
-        /^([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{4})$/i
-      ) || [0, "0", "3e8", "3e8"];
-      // Convert from Hex to Decimal and cache values
-      this.color.h = parseInt(h, 16);
-      this.color.s = Math.round(parseInt(s, 16) / 10); // Convert saturation to 100 Scale
-      this.color.b = Math.round(parseInt(b, 16) / 10); // Convert brightness to 100 scale
-    }
-
-    // Initialize the command color values with existing color state
-    if (!this.cmdColor) {
-      this.cmdColor = {
-        h: this.color.h,
-        s: this.color.s,
-        b: this.color.b,
-      };
-    }
-  }
-
-  // Caches color updates when HSB components have separate device topics
-  // cmdColor property always contains the desired HSB color state based on received
-  // command topic messages vs actual device color state, which may be pending
-  updateCommandColor(value, components) {
-    // Update any HSB component with a changed value
-    components = components.split(",");
-    const values = value.split(",");
-    for (const i in components) {
-      this.cmdColor[components[i]] = Math.round(values[i]);
-    }
-  }
-
-  // Returns Tuya HSB format value from current cmdColor HSB values
-  // Credit homebridge-tuya project for HSB conversion code
-  parseTuyaHsbColor() {
-    const { h, s, b } = this.cmdColor;
-    const hexColor =
-      h.toString(16).padStart(4, "0") +
-      (10 * s).toString(16).padStart(4, "0") +
-      (10 * b).toString(16).padStart(4, "0");
-    return hexColor;
-  }
-
-  // Returns Tuya HSBHEX format value from current cmdColor HSB values
-  // Credit homebridge-tuya project for HSBHEX conversion code
-  parseTuyaHsbHexColor() {
-    let { h, s, b } = this.cmdColor;
-    const hsb =
-      h.toString(16).padStart(4, "0") +
-      Math.round(2.55 * s)
-        .toString(16)
-        .padStart(2, "0") +
-      Math.round(2.55 * b)
-        .toString(16)
-        .padStart(2, "0");
-    h /= 60;
-    s /= 100;
-    b *= 2.55;
-    const i = Math.floor(h);
-    const f = h - i;
-    const p = b * (1 - s);
-    const q = b * (1 - s * f);
-    const t = b * (1 - s * (1 - f));
-    const rgb = (() => {
-      switch (i % 6) {
-        case 0:
-          return [b, t, p];
-        case 1:
-          return [q, b, p];
-        case 2:
-          return [p, b, t];
-        case 3:
-          return [p, q, b];
-        case 4:
-          return [t, p, b];
-        case 5:
-          return [b, p, q];
-        default:
-          throw "no way!";
-      }
-    })().map((c) => Math.round(c).toString(16).padStart(2, "0"));
-    const hex = rgb.join("");
-
-    return hex + hsb;
-  }
-
-  // Set white/colour mode based on received commands
-  async setLight(topic, command) {
-    let targetMode: any;
-
-    if (
-      topic.key === this.config.dpsWhiteValue ||
-      topic.key === this.config.dpsColorTemp
-    ) {
-      // If setting white level or color temperature, light should be in white mode
-      targetMode = "white";
-    } else if (topic.key === this.config.dpsColor) {
-      // Split device topic HSB components into array
-      const components = topic.components.split(",");
-
-      // If device topic inlucdes saturation check for changes
-      if (components.includes("s")) {
-        if (this.cmdColor.s < 10) {
-          // Saturation changed to < 10% = white mode
-          targetMode = "white";
-        } else {
-          // Saturation changed to >= 10% = color mode
-          targetMode = "colour";
-        }
-      } else {
-        // For other cases stay in existing mode
-        targetMode = this.dps[this.config.dpsMode].val;
-      }
-    }
-
-    // Send the issued command
-    this.set(command);
-
-    // Make sure the bulb stays in the correct mode
-    if (targetMode) {
-      command = {
-        dps: this.config.dpsMode,
-        set: targetMode,
-      };
-      this.set(command);
-    }
-  }
 
   // Simple function to help debug output
   toString() {
@@ -687,7 +541,7 @@ export default class TuyaDevice {
 
   async set(command) {
     debug("Set device " + this.options.id + " -> " + JSON.stringify(command));
-    return await new Promise((resolve, reject) => {
+    return await new Promise((resolve) => {
       this.device.set(command).then((result) => {
         resolve(result);
       });
@@ -764,6 +618,6 @@ export default class TuyaDevice {
   // Publish MQTT
   publishMqtt(topic: string, message: string) {
     debugState(topic, message);
-    this.mqttClient.publish(topic, message, { qos: 1 });
+    mqttClient.publish(topic, message, { qos: 1 });
   }
 }

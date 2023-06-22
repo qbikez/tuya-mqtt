@@ -11,7 +11,7 @@ export default class SimpleSwitch extends TuyaDevice {
 
   async init () {
     // Set device specific variables
-    this.config.dpsPower = this.config.dpsPower ? this.config.dpsPower : 1
+    this.config.dpsPower = this.config.dpsPower || 1;
 
     this.deviceData.mdl = 'Switch/Socket'
 
