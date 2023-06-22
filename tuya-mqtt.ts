@@ -81,15 +81,17 @@ async function republishDevices() {
 const initMQtt = () => {
   const mqttClient = connectMqtt(CONFIG);
 
-  mqttClient.on("connect", function (err) {
+  mqttClient.on("connect", function (_err) {
     debug("Connection established to MQTT server");
     const topic = `${CONFIG.topic}/#`;
     mqttClient.subscribe(topic);
     const statusTopic = CONFIG.status_topic || "homeassistant/status";
     mqttClient.subscribe(statusTopic);
+
+    republishDevices();
   });
 
-  mqttClient.on("reconnect", function (error) {
+  mqttClient.on("reconnect", function (_error) {
     if (mqttClient.connected) {
       debug("Connection to MQTT server lost. Attempting to reconnect...");
     } else {
@@ -173,15 +175,15 @@ const main = async () => {
     debugError(e);
     process.exit(1);
   }
-
-  initDevices(configDevices);
-
-  initMQtt();
-
+  
   if (configDevices.length === 0) {
     console.error("No devices found in devices file!");
     process.exit(1);
   }
+
+  initDevices(configDevices);
+  initMQtt();
+
 };
 
 setTimeout(() => republishDevices(), REPUBLISH_PERIOD);
