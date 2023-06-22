@@ -1,0 +1,73 @@
+diff --git a/node_modules/tuyapi/index.js b/node_modules/tuyapi/index.js
+index 1da2d99..98a0859 100644
+--- a/node_modules/tuyapi/index.js
++++ b/node_modules/tuyapi/index.js
+@@ -52,7 +52,8 @@ class TuyaDevice extends EventEmitter {
+     nullPayloadOnJSONError = false,
+     issueGetOnConnect = true,
+     issueRefreshOnConnect = false,
+-    issueRefreshOnPing = false
++    issueRefreshOnPing = false,
++    disconnectOnMissedPing = true
+   } = {}) {
+     super();
+ 
+@@ -62,7 +63,8 @@ class TuyaDevice extends EventEmitter {
+     this.globalOptions = {
+       issueGetOnConnect,
+       issueRefreshOnConnect,
+-      issueRefreshOnPing
++      issueRefreshOnPing,
++      disconnectOnMissedPing
+     };
+ 
+     this.nullPayloadOnJSONError = nullPayloadOnJSONError;
+@@ -96,7 +98,7 @@ class TuyaDevice extends EventEmitter {
+     this._connectTimeout = 5; // Seconds
+     this._pingPongPeriod = 10; // Seconds
+     this._pingPongTimeout = null;
+-    this._lastPingAt = new Date();
++    this._lastPongAt = new Date();
+ 
+     this._currentSequenceN = 0;
+     this._resolvers = {};
+@@ -461,11 +463,14 @@ class TuyaDevice extends EventEmitter {
+     });
+ 
+     // Check for response
+-    const now = new Date();
++    const lastPingAt = new Date();
+ 
+     this._pingPongTimeout = setTimeout(() => {
+-      if (this._lastPingAt < now) {
+-        this.disconnect();
++      if (this._lastPongAt < lastPingAt) {
++        debug(`Device missed pong timeout of ${this._responseTimeout * 1000}ms.`);
++        if (this.globalOptions.disconnectOnMissedPing) {
++          this.disconnect();
++        }
+       }
+     }, this._responseTimeout * 1000);
+ 
+@@ -740,7 +745,7 @@ class TuyaDevice extends EventEmitter {
+        */
+       this.emit('heartbeat');
+ 
+-      this._lastPingAt = new Date();
++      this._lastPongAt = new Date();
+ 
+       return;
+     }
+@@ -816,10 +821,11 @@ class TuyaDevice extends EventEmitter {
+    */
+   disconnect() {
+     if (!this._connected) {
++      debug(`Already disconnected ${this.device.ip}`);
+       return;
+     }
+ 
+-    debug('Disconnect');
++    debug(`Disconnect ${this.device.ip}`);
+ 
+     this._connected = false;
+     this.device.parser.cipher.setSessionKey(null);

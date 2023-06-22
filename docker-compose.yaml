@@ -8,3 +8,5 @@ services:
     volumes:
       - "./config.json:/app/config.json"
       - "./devices.conf:/app/devices.conf"
+    logging:
+      driver: local

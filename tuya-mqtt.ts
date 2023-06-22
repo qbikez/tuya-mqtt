@@ -4,13 +4,14 @@ import mqtt from "mqtt";
 import dbg from "debug";
 import SimpleCover from "./devices/simple-cover";
 import SimpleSwitch from "./devices/simple-switch";
-import SimpleDimmer from "./devices/simple-dimmer";
-import RGBTWLight from "./devices/rgbtw-light";
+//import SimpleDimmer from "./devices/simple-dimmer";
+//import RGBTWLight from "./devices/rgbtw-light";
 import GenericDevice from "./devices/generic-device";
 import utils from "./lib/utils";
 import CONFIG from "./config.json";
 import { DeviceConfig, DeviceInfo } from "./interfaces";
 import { connectMqtt } from "./lib/mqtt";
+import TuyaDevice from "./devices/tuya-device";
 
 const REPUBLISH_PERIOD = 60000;
 
@@ -18,7 +19,7 @@ const debug = dbg("tuya-mqtt:info");
 const debugCommand = dbg("tuya-mqtt:command");
 const debugError = dbg("tuya-mqtt:error");
 
-const tuyaDevices: Array<ReturnType<typeof createDevice>> = [];
+const tuyaDevices: TuyaDevice[] = [];
 
 // Setup Exit Handlers
 process.on("exit", processExit.bind(0));
@@ -49,10 +50,10 @@ function createDevice(deviceConfig: DeviceConfig) {
       return new SimpleCover(deviceInfo);
     case "SimpleSwitch":
       return new SimpleSwitch(deviceInfo);
-    case "SimpleDimmer":
-      return new SimpleDimmer(deviceInfo);
-    case "RGBTWLight":
-      return new RGBTWLight(deviceInfo);
+    // case "SimpleDimmer":
+    //   return new SimpleDimmer(deviceInfo);
+    // case "RGBTWLight":
+    //   return new RGBTWLight(deviceInfo);
     default:
       return new GenericDevice(deviceInfo);
   }
@@ -118,7 +119,7 @@ const initMQtt = () => {
         if (message === "online") {
           republishDevices();
         }
-      } else if (commandTopic.includes("command")) {
+      } else if (commandTopic.includes("command") || commandTopic.startsWith("set")) {
         // If it looks like a valid command topic try to process it
         debugCommand(
           "Received MQTT message -> ",
@@ -134,10 +135,12 @@ const initMQtt = () => {
             d.options.name === deviceTopicLevel ||
             d.options.id === deviceTopicLevel
         );
+
         if (!device) {
-          debugError(`Device for topic level ${deviceTopicLevel} not found!`);
+          debugError(`Device for topic '${deviceTopicLevel}' not found!`);
           return;
         }
+
         switch (topicLength) {
           case 3:
             device.processCommand(message, commandTopic);
@@ -149,6 +152,8 @@ const initMQtt = () => {
             const dpsKey = splitTopic[topicLength - 2];
             device.processDpsKeyCommand(message, dpsKey);
             break;
+          default:
+            debugError(`Invalid command topic: ${topic}`);
         }
       }
     } catch (e) {
