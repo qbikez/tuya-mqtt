@@ -4,7 +4,6 @@ export type DeviceConfig = {
 
 export type DeviceInfo = {
   configDevice: DeviceConfig;
-  mqttClient: any;
   topic: string;
   discoveryTopic: string;
 };

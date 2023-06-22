@@ -36,10 +36,9 @@ async function processExit(exitCode) {
 }
 
 // Get new deivce based on configured type
-function getDevice(configDevice: DeviceConfig, mqttClient) {
+function getDevice(configDevice: DeviceConfig) {
   const deviceInfo: DeviceInfo = {
     configDevice,
-    mqttClient,
     topic: CONFIG.topic,
     discoveryTopic: CONFIG.discovery_topic,
   };
@@ -56,9 +55,9 @@ function getDevice(configDevice: DeviceConfig, mqttClient) {
   return new GenericDevice(deviceInfo);
 }
 
-function initDevices(configDevices: DeviceConfig[], mqttClient) {
+function initDevices(configDevices: DeviceConfig[]) {
   for (const configDevice of configDevices) {
-    const newDevice = getDevice(configDevice, mqttClient);
+    const newDevice = getDevice(configDevice);
     tuyaDevices.push(newDevice);
   }
 }
@@ -105,7 +104,7 @@ const main = async () => {
     mqttClient.subscribe(topic);
     const statusTopic = CONFIG.status_topic || "homeassistant/status";
     mqttClient.subscribe(statusTopic);
-    initDevices(configDevices, mqttClient);
+    initDevices(configDevices);
   });
 
   mqttClient.on("reconnect", function (error) {
