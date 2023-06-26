@@ -76,12 +76,12 @@ async function republishDevices() {
 
 const initMQtt = () => {
   const mqttClient = connectMqtt(CONFIG);
+  const statusTopic = CONFIG.status_topic || "homeassistant/status";
 
   mqttClient.on("connect", function (_err) {
     debug("Connection established to MQTT server");
     const topic = `${CONFIG.topic}/#`;
     mqttClient.subscribe(topic);
-    const statusTopic = CONFIG.status_topic || "homeassistant/status";
     mqttClient.subscribe(statusTopic);
 
     republishDevices();
@@ -107,7 +107,7 @@ const initMQtt = () => {
       const commandTopic = splitTopic[topicLength - 1];
       const deviceTopicLevel = splitTopic[1];
 
-      if (topic === "homeassistant/status" || topic === "hass/status") {
+      if (topic === statusTopic) {
         debug(
           "Home Assistant state topic " +
             topic +
