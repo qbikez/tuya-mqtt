@@ -68,14 +68,10 @@ function initDevices(configDevices: DeviceConfig[]) {
 
 // Republish devices 2x with 30 seconds sleep if restart of HA is detected
 async function republishDevices() {
-  for (let i = 0; i < 2; i++) {
     debug("Resending device config/state in 30 seconds");
-    await utils.sleep(30);
     for (const device of tuyaDevices) {
       device.republish();
     }
-    await utils.sleep(2);
-  }
 }
 
 const initMQtt = () => {
@@ -119,6 +115,8 @@ const initMQtt = () => {
             message
         );
         if (message === "online") {
+          debug("Home Assistant is online. Resending device config/state");
+          utils.sleep(30);
           republishDevices();
         }
       } else if (commandTopic.includes("command") || commandTopic.startsWith("set")) {
