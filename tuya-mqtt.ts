@@ -68,10 +68,10 @@ function initDevices(configDevices: DeviceConfig[]) {
 
 // Republish devices 2x with 30 seconds sleep if restart of HA is detected
 async function republishDevices() {
-    debug("Resending device config/state in 30 seconds");
-    for (const device of tuyaDevices) {
-      device.republish();
-    }
+  debug("Resending device config/state in 30 seconds");
+  for (const device of tuyaDevices) {
+    device.republish();
+  }
 }
 
 const initMQtt = () => {
@@ -95,11 +95,11 @@ const initMQtt = () => {
     }
   });
 
-  mqttClient.on("error", function (error) {
+  mqttClient.on("error", (error) => {
     debug("Unable to connect to MQTT server", error);
   });
 
-  mqttClient.on("message", function (topic: string, message: string) {
+  mqttClient.on("message", async (topic: string, message: string) => {
     try {
       message = message.toString();
       const splitTopic = topic.split("/");
@@ -116,10 +116,15 @@ const initMQtt = () => {
         );
         if (message === "online") {
           debug("Home Assistant is online. Resending device config/state");
-          utils.sleep(30);
-          republishDevices();
+          for (let i = 0; i < 2; i++) {
+            await utils.sleep(5);
+            republishDevices();
+          }
         }
-      } else if (commandTopic.includes("command") || commandTopic.startsWith("set")) {
+      } else if (
+        commandTopic.includes("command") ||
+        commandTopic.startsWith("set")
+      ) {
         // If it looks like a valid command topic try to process it
         debugCommand(
           "Received MQTT message -> ",
@@ -173,7 +178,7 @@ const main = async () => {
     debugError(e);
     process.exit(1);
   }
-  
+
   if (configDevices.length === 0) {
     console.error("No devices found in devices file!");
     process.exit(1);
@@ -181,7 +186,6 @@ const main = async () => {
 
   initDevices(configDevices);
   initMQtt();
-
 };
 
 setTimeout(() => republishDevices(), REPUBLISH_PERIOD);
