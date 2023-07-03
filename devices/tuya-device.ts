@@ -375,10 +375,10 @@ export default class TuyaDevice {
         )}`
       );
       if (command === "100") {
-        this.processDeviceCommand("close", "command");
+        this.processDeviceCommand("open", "command");
       }
       if (command === "0") {
-        this.processDeviceCommand("open", "command");
+        this.processDeviceCommand("close", "command");
       }
     } else {
       debugCommand(

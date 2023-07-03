@@ -5,6 +5,7 @@ import utils from "../lib/utils";
 const debug = dbg("tuya-mqtt:device");
 const debugDiscovery = dbg("tuya-mqtt:discovery");
 
+type CoverState = "opening" | "closing" | "stopped";
 export default class SimpleCover extends TuyaDevice {
   async init() {
     // Set device specific variables
@@ -56,20 +57,35 @@ export default class SimpleCover extends TuyaDevice {
 
   override publishTopics(): void {
     super.publishTopics();
-    const deviceTopic = this.deviceTopics["state"];
-    const key = deviceTopic.key;
-    const state = this.getFriendlyState(deviceTopic, this.dps[key].val);
-    const position = state == "opening" ? 0 : state == "closing" ? 100 : 50;
+    const position = this.getPosition();
+    
     this.publishMqtt(this.baseTopic + "position", `${position}`);
   }
 
-  override parseStringState(value: unknown): string {
+  override parseStringState(value: unknown): CoverState {
+    return this.mapState(value as string);
+  }
+
+  getDps<T>(what: "state") {
+    const deviceTopic = this.deviceTopics[what];
+    const key = deviceTopic.key;
+    return this.dps[key].val as T;
+  }
+
+  getPosition(): number {
+    const state = this.mapState(this.getDps<string>("state"));
+    const position = state == "opening" ? 0 : state == "closing" ? 100 : 50;
+
+    return position;
+  }
+
+  mapState(value: string): CoverState {
     const map = {
       open: "opening",
       close: "closing",
       stop: "stopped",
     };
 
-    return map[value as string];
+    return map[value];
   }
 }
