@@ -374,18 +374,19 @@ export default class TuyaDevice {
           command
         )}`
       );
-      if (command === "100") {
-        this.processDeviceCommand("open", "command");
-      }
-      if (command === "0") {
-        this.processDeviceCommand("close", "command");
-      }
+
+      this.processSetPosition(command as string);
     } else {
       debugCommand(
-        `Invalid command topic ${this.baseTopic}${commandTopic} for device ${this.toString()}. Expected '${deviceTopic}'.`
+        `Invalid command topic ${
+          this.baseTopic
+        }${commandTopic} for device ${this.toString()}. Expected '${deviceTopic}'.`
       );
     }
   }
+
+  // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+  processSetPosition(command: string) {}
 
   // Process Tuya JSON commands via DPS command topic
   public processDpsCommand(message) {

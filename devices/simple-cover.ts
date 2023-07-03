@@ -52,13 +52,16 @@ export default class SimpleCover extends TuyaDevice {
 
     debugDiscovery("Home Assistant config topic: " + configTopic);
     debugDiscovery(discoveryData);
-    this.publishMqtt(configTopic, JSON.stringify(discoveryData), { qos: 1, retain: true });
+    this.publishMqtt(configTopic, JSON.stringify(discoveryData), {
+      qos: 1,
+      retain: true,
+    });
   }
 
   override publishTopics(): void {
     super.publishTopics();
     const position = this.getPosition();
-    
+
     this.publishMqtt(this.baseTopic + "position", `${position}`);
   }
 
@@ -74,9 +77,26 @@ export default class SimpleCover extends TuyaDevice {
 
   getPosition(): number {
     const state = this.mapState(this.getDps<string>("state"));
-    const position = state == "opening" ? 0 : state == "closing" ? 100 : 50;
+    switch (state) {
+      case "opening":
+        return 100;
+      case "closing":
+        return 0;
+      default:
+        return 50;
+    }
+  }
 
-    return position;
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  override processSetPosition(command: string): void {
+    switch (command) {
+      case "100":
+        this.processDeviceCommand("open", "command");
+        break;
+      case "0":
+        this.processDeviceCommand("close", "command");
+        break;
+    }
   }
 
   mapState(value: string): CoverState {
